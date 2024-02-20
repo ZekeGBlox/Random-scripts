@@ -1,9 +1,7 @@
-
-local StarterGui = game:GetService("StarterGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WeaponsFolder = ReplicatedStorage.Weapons
 
-
+print("MADE BY ZEKEGBLOX)
 
 local modifications = {
     { variableName = "Ammo", value = 9999 },
@@ -23,10 +21,3 @@ for _, gun in pairs(WeaponsFolder:GetChildren()) do
         end
     end
 end
-
-StarterGui:SetCore("SendNotification", {
-    Title = "Loaded Script",
-    Text = "Made by ZekeGBlox",
-    Icon = "",
-    Duration = 10
-})
