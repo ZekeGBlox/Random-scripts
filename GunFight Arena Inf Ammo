@@ -1,3 +1,10 @@
+StarterGui:SetCore("SendNotification", {
+    Title = "Loaded Script",
+    Text = "Made by ZekeGBlox",
+    Icon = "",
+    Duration = 10
+})
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WeaponsFolder = ReplicatedStorage.Weapons
 
