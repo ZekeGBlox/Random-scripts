@@ -4,8 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WeaponsFolder = ReplicatedStorage.Weapons
 
 local modifications = {
-    { variableName = "Ammo", value = 9999 },
-    { variableName = "StoredAmmo", value = 9999 },
+    { variableName = "Ammo", value = 999 },
+    { variableName = "StoredAmmo", value = 999 },
 }
 
 for _, gun in pairs(WeaponsFolder:GetChildren()) do
