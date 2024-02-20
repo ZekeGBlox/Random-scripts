@@ -1,7 +1,7 @@
+print("Working made by zekegblox")
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WeaponsFolder = ReplicatedStorage.Weapons
-
-print("MADE BY ZEKEGBLOX)
 
 local modifications = {
     { variableName = "Ammo", value = 9999 },
