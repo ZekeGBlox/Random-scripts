@@ -1,27 +1,21 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local WeaponsFolder = ReplicatedStorage.Weapons
+
 local modifications = {
-      { variableName = "Ammo", value = 9999 },
-      { variableName = "StoredAmmo", value = 9999 },
-  }
-  
-  -- Getgenv toggle 
-  local function toggleAmmoModification()
-      local ammoModEnabled = getgenv().AmmoModEnabled or false -- Check if AmmoModEnabled exists
-  
-      if ammoModEnabled then -- Only apply changes if enabled
-          for _, gun in pairs(WeaponsFolder:GetChildren()) do
-              if gun:IsA("Folder") then 
-                  local variables = gun:FindFirstChild("Variables")
-                  if variables then 
-                      for _, changeData in pairs(modifications) do
-                          local valueToChange = variables:FindFirstChild(changeData.variableName)
-                          if valueToChange then
-                              valueToChange.Value = changeData.value
-                          end
-                      end
-                  end
-              end
-          end
-      end
-  end
-  
-  
+    { variableName = "Ammo", value = 9999 },
+    { variableName = "StoredAmmo", value = 9999 },
+}
+
+for _, gun in pairs(WeaponsFolder:GetChildren()) do
+    if gun:IsA("Folder") then -- Assuming guns are within folders
+        local variables = gun:FindFirstChild("Variables")
+        if variables then 
+            for _, changeData in pairs(modifications) do
+                local valueToChange = variables:FindFirstChild(changeData.variableName)
+                if valueToChange then
+                    valueToChange.Value = changeData.value
+                end
+            end
+        end
+    end
+end
