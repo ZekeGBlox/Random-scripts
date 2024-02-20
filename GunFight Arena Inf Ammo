@@ -1,12 +1,14 @@
+
+local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local WeaponsFolder = ReplicatedStorage.Weapons
+
 StarterGui:SetCore("SendNotification", {
     Title = "Loaded Script",
     Text = "Made by ZekeGBlox",
     Icon = "",
     Duration = 10
 })
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local WeaponsFolder = ReplicatedStorage.Weapons
 
 local modifications = {
     { variableName = "Ammo", value = 9999 },
