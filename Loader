@@ -1,0 +1,26 @@
+local currentGameId = game.GameId
+local specialGameIds = {5865858426, 3398014311} -- Easily add more IDs here
+
+-- Check for special games first
+for _, specialId in ipairs(specialGameIds) do
+    if currentGameId == specialId then
+        if specialId == 5865858426 then
+
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Retail%20Tycoon%202'))()
+            print("Executing code for game ID 5865858426")
+        elseif specialId == 3398014311 then
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Restaurant%20Tycoon%202"))() 
+            print("Executing code for game ID 3398014311")
+        end
+        break -- Exit the loop once a special ID match is found
+    end
+end
+
+-- If no match in the special IDs list:
+if not foundInSpecials then
+    
+loadstring(game:HttpGet('https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Universal%20Ballshit'))()
+
+    print("Executing universal code")
+end
