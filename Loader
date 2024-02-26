@@ -1,19 +1,22 @@
+local gameScripts = {
+    [2092410051] = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Retail%20Tycoon%202',
+    [1214576306] = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Restaurant%20Tycoon%202',
+    [5012222382] = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Gunfight%20Arena',
+    -- Add more game IDs and their scripts as needed
+}
+
+local universalScript = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Universal%20Ballshit'
 local currentGameId = game.GameId
 print("Current Game ID:", currentGameId)
 
-if currentGameId == 2092410051 then
-   print("Loading Retail Tycoon 2 script")
-   loadstring(game:HttpGet('https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Retail%20Tycoon%202'))()
-   print("Executing code for Retail Tycoon 2")
-elseif currentGameId == 1214576306 then
-   print("Loading Restaurant Tycoon 2 script")
-   loadstring(game:HttpGet("https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Restaurant%20Tycoon%202"))() 
-   print("Executing code for Restaurant Tycoon 2")
-elseif currentGameId == 5012222382 then
-   loadstring(game:HttpGet("https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Gunfight%20Arena"))() 
-   print("Executing code for GunFight Arena")
+local scriptUrl = gameScripts[currentGameId] or universalScript
+local gameName = game.MarketplaceService:GetProductInfo(currentGameId).Name
+
+if scriptUrl == universalScript then
+    print("Loading universal script")
 else
-   print("Loading universal script")
-   loadstring(game:HttpGet('https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Universal%20Ballshit'))()
-   print("Executing universal script")
+    print("Loading script for", gameName)
 end
+
+loadstring(game:HttpGet(scriptUrl))()
+print("Executing code for", gameName)
