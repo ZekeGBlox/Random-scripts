@@ -9,7 +9,7 @@ elseif currentGameId == 1214576306 then
    print("Loading Restaurant Tycoon 2 script")
    loadstring(game:HttpGet("https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Restaurant%20Tycoon%202"))() 
    print("Executing code for Restaurant Tycoon 2")
-elseif currentGameId == 14518422161 then
+elseif currentGameId == 5012222382 then
 
    loadstring(game:HttpGet("https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Gunfight%20Arena"))() 
    print("Executing code for GunFight Arena")
