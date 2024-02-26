@@ -1,14 +1,16 @@
-
-
 local currentGameId = game.GameId
+print("Current Game ID:", currentGameId)
 
 if currentGameId == 5865858426 then
+   print("Loading Retail Tycoon 2 script")
    loadstring(game:HttpGet('https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Retail%20Tycoon%202'))()
-    print("Executing code for game ID 5865858426")
+   print("Executing code for game ID 5865858426")
 elseif currentGameId == 3398014311 then
+   print("Loading Restaurant Tycoon 2 script")
    loadstring(game:HttpGet("https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Restaurant%20Tycoon%202"))() 
-    print("Executing code for game ID 3398014311")
+   print("Executing code for game ID 3398014311")
 else
+   print("Loading universal script")
    loadstring(game:HttpGet('https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Universal%20Ballshit'))()
-    print("Executing universal code (other game IDs)")
+   print("Executing universal code (other game IDs)")
 end
