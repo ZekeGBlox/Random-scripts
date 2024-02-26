@@ -1,0 +1,85 @@
+repeat task.wait() until game:IsLoaded()
+
+for i,v in pairs(getconnections(game:GetService("Players").LocalPlayer.Idled)) do
+    v:Disable()
+end
+
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+
+local Window = OrionLib:MakeWindow({
+Name = "Universal",
+ HidePremium = false,
+ SaveConfig = true,
+ ConfigFolder = "Main"
+})
+
+local Tab1 = Window:MakeTab({
+	Name = "Main",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+
+local Section = Tab1:AddSection({
+	Name = "Main"
+})
+
+
+
+OrionLib:MakeNotification({
+	Name = "Script Loaded",
+	Content = "Loaded",
+	Image = "rbxassetid://4483345998",
+	Time = 5
+})
+
+OrionLib:MakeNotification({
+	Name = "Credits",
+	Content = "Made By ZekeGBlox",
+	Image = "rbxassetid://4483345998",
+	Time = 10
+})
+
+
+Tab1:AddSlider({
+	Name = "Slider",
+	Min = 30,
+	Max = 200,
+	Default = 30,
+	Color = Color3.fromRGB(255,255,255),
+	Increment = 1,
+	ValueName = "Jumppower",
+	Callback = function(Value)
+    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+	end    
+})
+
+Tab1:AddSlider({
+	Name = "Slider",
+	Min = 40,
+	Max = 200,
+	Default = 40,
+	Color = Color3.fromRGB(255,255,255),
+	Increment = 1,
+	ValueName = "WalkSpeed",
+	Callback = function(Value)
+    game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
+	end    
+})
+
+Tab1:AddButton({
+	Name = "Destroy UI",
+	Callback = function()
+      		print("button pressed")
+          OrionLib:Destroy()
+  	end    
+})
+
+Tab1:AddButton({
+	Name = "Copy Discord Link",
+	Callback = function()
+        setclipboard("https://discord.gg/RkPbcxja5c")
+  	end    
+})
+
+OrionLib:Init()
