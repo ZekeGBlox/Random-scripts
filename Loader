@@ -2,6 +2,8 @@ local gameScripts = {
     [2092410051] = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Retail%20Tycoon%202',
     [1214576306] = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Restaurant%20Tycoon%202',
     [5012222382] = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Gunfight%20Arena',
+    [14819490378] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/SwordBurst%203",
+    [15695929915] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/SwordBurst%203",
     -- Add more game IDs and their scripts as needed
 }
 
