@@ -4,6 +4,7 @@ local gameScripts = {
     [5012222382] = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Gunfight%20Arena',
     [14819490378] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/SwordBurst%203",
     [4093155512] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/SwordBurst%203",
+    [16582687738] =  "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/SwordBurst%203",
     -- Add more game IDs and their scripts as needed
 }
 
