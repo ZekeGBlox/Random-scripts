@@ -5,8 +5,7 @@ local gameScripts = {
     [14819490378] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/SwordBurst%203",
     [4093155512] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/SwordBurst%203",
     [16582687738] =  "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/SwordBurst%203",
-    [13772394625] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Blade%20Ball",
-    [16281300371] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Blade%20Ball",
+    [4777817887] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Blade%20Ball",
 }
 
 local universalScript = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Universal%20Ballshit'
