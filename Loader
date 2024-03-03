@@ -10,16 +10,32 @@ local gameScripts = {
 
 local universalScript = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Universal%20Ballshit'
 local currentGameId = game.GameId
-print("Current Game ID:", currentGameId)
+local checkInterval = 5  -- Check every 5 seconds
 
-local scriptUrl = gameScripts[currentGameId] or universalScript
-local gameName = game.MarketplaceService:GetProductInfo(currentGameId).Name
+local function loadScript(gameId)
+    local scriptUrl = gameScripts[gameId] or universalScript
+    local gameName = game.MarketplaceService:GetProductInfo(gameId).Name
 
-if scriptUrl == universalScript then
-    print("Loading universal script")
-else
-    print("Loading script for", gameName)
+    if scriptUrl == universalScript then
+        print("Loading universal script")
+    else
+        print("Loading script for", gameName)
+    end
+
+    loadstring(game:HttpGet(scriptUrl))()
+    print("Executing code for", gameName)
 end
 
-loadstring(game:HttpGet(scriptUrl))()
-print("Executing code for", gameName)
+local function checkForGameChange()
+    while wait(checkInterval) do
+        local newGameId = game.GameId
+        if newGameId ~= currentGameId then
+            print("Game ID changed from", currentGameId, "to", newGameId)
+            currentGameId = newGameId
+            loadScript(newGameId)
+        end
+    end
+end
+
+loadScript(currentGameId)
+checkForGameChange()
