@@ -11,6 +11,7 @@ local gameScripts = {
     [66654135] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/MM2",
     [142823291] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/MM2",
     [2377868063] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Strucid",
+    [833423526] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Strucid",
 }
 
 local universalScript = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Universal%20Ballshit'
