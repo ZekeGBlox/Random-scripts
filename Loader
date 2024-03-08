@@ -17,6 +17,7 @@ local gameScripts = {
     [7449423635] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Blox%20fruit",
     [994732206] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Blox%20fruit",
     [698448212] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Ro%20Beats",
+    [5938036553] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/FrontLines",
 }
 
 local universalScript = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Universal%20Ballshit'
