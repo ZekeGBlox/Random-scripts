@@ -28,16 +28,26 @@ local checkInterval = 5  -- Check every 5 seconds
 
 local function loadScript(gameId)
     local scriptUrl = gameScripts[gameId] or universalScript
-    local gameName = game.MarketplaceService:GetProductInfo(gameId).Name
+    local success, gameName = pcall(function() return game.MarketplaceService:GetProductInfo(gameId).Name end)
+
+    if not success then
+        gameName = "Unknown Game"
+        print("Failed to fetch game name for ID:", gameId)
+    end
 
     if scriptUrl == universalScript then
-        print("Loading universal script")
+        print("Loading universal script for", gameName)
     else
         print("Loading script for", gameName)
     end
 
-    loadstring(game:HttpGet(scriptUrl))()
-    print("Executing code for", gameName)
+    local scriptLoaded, loadError = pcall(function() loadstring(game:HttpGet(scriptUrl))() end)
+
+    if scriptLoaded then
+        print("Successfully executed script for", gameName)
+    else
+        print("Failed to execute script for", gameName, "- Error:", loadError)
+    end
 end
 
 local function checkForGameChange()
