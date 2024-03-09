@@ -6,15 +6,37 @@ end
 
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 
+local Players = game:GetService("Players")
+local Teams = game:GetService("Teams")
+local StarterGui = game:GetService("StarterGui")
+
+
+
+
 local Window = OrionLib:MakeWindow({
-Name = "Universal",
+Name = "Zeke Hub Universal",
  HidePremium = false,
  SaveConfig = true,
  ConfigFolder = "Main"
 })
 
 local Tab1 = Window:MakeTab({
-	Name = "Main",
+	Name = "Player Tab",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+local TeleportTab = Window:MakeTab({
+	Name = "Teleport Tab",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+local ESPTab = Window:MakeTab({
+	Name = "ESP Tab",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+local Tab = Window:MakeTab({
+	Name = "Credits Tab",
 	Icon = "rbxassetid://4483345998",
 	PremiumOnly = false
 })
@@ -24,7 +46,9 @@ local Section = Tab1:AddSection({
 	Name = "Main"
 })
 
-
+-- Assuming the ESP script is loaded and initialized as follows
+local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/ESP"))()
+ESP:Toggle(true)
 
 OrionLib:MakeNotification({
 	Name = "Script Loaded",
@@ -40,6 +64,120 @@ OrionLib:MakeNotification({
 	Time = 10
 })
 
+local flyEnabled = false
+local flySpeed = 10
+local player = game.Players.LocalPlayer
+local BodyGyro, BodyVelocity
+
+local function startFly()
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    humanoid.PlatformStand = true
+    repeat wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local rootPart = player.Character.HumanoidRootPart
+    BodyGyro = Instance.new("BodyGyro", rootPart)
+    BodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    BodyGyro.CFrame = rootPart.CFrame
+    BodyVelocity = Instance.new("BodyVelocity", rootPart)
+    BodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+
+    while flyEnabled do
+        wait()
+        local camCFrame = workspace.CurrentCamera.CoordinateFrame
+        local direction = Vector3.new(0, 0, 0)
+
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then
+            direction = direction + (camCFrame.lookVector * flySpeed)
+        end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then
+            direction = direction - (camCFrame.lookVector * flySpeed)
+        end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) then
+            direction = direction - (camCFrame.rightVector * flySpeed)
+        end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) then
+            direction = direction + (camCFrame.rightVector * flySpeed)
+        end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) then
+            direction = direction + (camCFrame.upVector * flySpeed)
+        end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.C) then
+            direction = direction - (camCFrame.upVector * flySpeed)
+        end
+
+        BodyVelocity.Velocity = direction
+        BodyGyro.CFrame = camCFrame
+    end
+end
+
+local function stopFly()
+    if BodyGyro then BodyGyro:Destroy() end
+    if BodyVelocity then BodyVelocity:Destroy() end
+    if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+        player.Character.Humanoid.PlatformStand = false
+    end
+end
+
+Tab1:AddBind({
+    Name = "Toggle Fly",
+    Default = Enum.KeyCode.F,
+    Hold = false,
+    Callback = function()
+        flyEnabled = not flyEnabled
+        if flyEnabled then
+            startFly()
+        else
+            stopFly()
+        end
+    end
+})
+Tab1:AddSlider({
+    Name = "Fly Speed",
+    Min = 1,
+    Max = 100,
+    Default = flySpeed,
+    Callback = function(value)
+        flySpeed = value
+    end    
+})
+
+
+
+
+local noclip = false
+local player = game.Players.LocalPlayer
+
+local function onStepped()
+    if noclip then
+        if player.Character then
+            for _, part in pairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end
+
+Tab1:AddToggle({
+    Name = "Noclip",
+    Default = false,
+    Callback = function(value)
+        noclip = value
+        if noclip then
+            game:GetService("RunService").Stepped:Connect(onStepped)
+        else
+            if player.Character then
+                for _, part in pairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") and not part.CanCollide then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
+    end
+})
+
 
 Tab1:AddSlider({
 	Name = "Slider",
@@ -48,7 +186,7 @@ Tab1:AddSlider({
 	Default = 30,
 	Color = Color3.fromRGB(255,255,255),
 	Increment = 1,
-	ValueName = "WalkSpeed",
+	ValueName = "Jumppower",
 	Callback = function(Value)
     game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
 	end    
@@ -61,13 +199,80 @@ Tab1:AddSlider({
 	Default = 40,
 	Color = Color3.fromRGB(255,255,255),
 	Increment = 1,
-	ValueName = "JumpPower",
+	ValueName = "WalkSpeed",
 	Callback = function(Value)
     game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
 	end    
 })
 
-Tab1:AddButton({
+
+local players = {}
+for i, player in pairs(game.Players:GetPlayers()) do
+    table.insert(players, player.Name)
+end
+
+local selectedPlayer = nil
+
+TeleportTab:AddDropdown({
+    Name = "Select Player to Teleport",
+    Options = players,
+    Callback = function(value)
+        selectedPlayer = value
+    end
+})
+
+TeleportTab:AddButton({
+    Name = "Teleport to Player",
+    Callback = function()
+        if selectedPlayer and game.Players:FindFirstChild(selectedPlayer) then
+            local targetPlayer = game.Players:FindFirstChild(selectedPlayer)
+            local player = game.Players.LocalPlayer
+            if targetPlayer.Character and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                player.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame
+            end
+        end
+    end
+})
+
+
+
+ESPTab:AddToggle({
+    Name = "Boxes",
+    Default = ESP.Boxes, 
+    Save = true,
+    Flag = "ESP",-- Sets the default state based on ESP's initial state
+    Callback = function(state)
+        ESP.Boxes = state
+        -- Optionally, add a notification for toggling
+        
+    end
+})
+
+-- Toggle for ESP Nametags
+ESPTab:AddToggle({
+    Name = "Nametags",
+    Default = ESP.Names,
+    Save = true,
+    Flag = "Names",
+    Callback = function(state)
+        ESP.Names = state
+       
+    end
+})
+
+-- Toggle for ESP Tracers
+ESPTab:AddToggle({
+    Name = "Tracers",
+    Default = ESP.Tracers,
+    Save = true,
+    Flag = "Tracers",
+    Callback = function(state)
+        ESP.Tracers = state
+       
+    end
+})
+
+Tab:AddButton({
 	Name = "Destroy UI",
 	Callback = function()
       		print("button pressed")
@@ -75,7 +280,7 @@ Tab1:AddButton({
   	end    
 })
 
-Tab1:AddButton({
+Tab:AddButton({
 	Name = "Copy Discord Link",
 	Callback = function()
         setclipboard("https://discord.gg/RkPbcxja5c")
