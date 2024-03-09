@@ -22,6 +22,10 @@ local gameScripts = {
     [21328666904] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/FrontLines",
     [2534724415] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/ERLC",
     [903807016] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/ERLC",
+    [621129760] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/KAT",
+    [254394801] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/KAT",
+    [3104101863] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Michael%20Zombies", 
+    [8054462345] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Michael%20Zombies", 
 }
 
 local universalScript = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Universal%20Ballshit'
