@@ -28,6 +28,8 @@ local gameScripts = {
     [8054462345] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Michael%20Zombies", 
     [9872472334] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Evade",
     [3647333358] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Evade",
+    [537413528] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Build%20A%20Boat", 
+    [210851291] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Build%20A%20Boat", 
 }
 
 local universalScript = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Universal%20Ballshit'
