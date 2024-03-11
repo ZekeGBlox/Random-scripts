@@ -32,6 +32,8 @@ local gameScripts = {
     [210851291] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Build%20A%20Boat", 
     [271119130] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Breaking%20Point",
     [648362523] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Breaking%20Point",
+    [73885730] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Prison%20Life",
+    [155615604] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Prison%20Life",
 }
 
 local universalScript = 'https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Universal%20Ballshit'
