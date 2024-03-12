@@ -35,6 +35,8 @@ local gameScripts = {
     [73885730] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Prison%20Life",
     [155615604] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Prison%20Life",
     [2132866904] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/FrontLines",
+    [11378364822] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Tales%20Of%20Tanorio", 
+    [4048852641] = "https://raw.githubusercontent.com/ZekeGBlox/Random-scripts/main/Tales%20Of%20Tanorio", 
     
 }
 
