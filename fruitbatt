@@ -1,14 +1,3 @@
-for fruitbattleground, isfuickingdogshit in pairs(getgc(true)) do
-    if pcall(function() return rawget(isfuickingdogshit, "indexInstance") end) 
-    and type(rawget(isfuickingdogshit, "indexInstance")) == "table" 
-    and rawget(isfuickingdogshit, "indexInstance")[1] == "kick" then
-        isfuickingdogshit.tvk = {"kick", function() 
-            return game.Workspace:WaitForChild("") 
-        end}
-    end
-end
-
-
 -- Preventing the player from being kicked for idling
 local vu = game:GetService("VirtualUser")
 game:GetService("Players").LocalPlayer.Idled:connect(function()
@@ -30,21 +19,20 @@ local Sense = loadstring(game:HttpGet('https://sirius.menu/sense'))()
 Sense.Load()
 
 
-
 --- combat assistance
 
-local UserInputService = game:GetService("UserInputService")
 local MouseLock = {
     Settings = {
         Enabled = false,
-        Key = Enum.KeyCode.Q,
-        Prediction = 0.129,
+        Key = Enum.KeyCode.E, -- Changed to Enum.KeyCode.Q
+        Prediction = 0.1211,
         AimPart = 'HumanoidRootPart'
     }
 }
 
 local CurrentCamera = game:GetService("Workspace").CurrentCamera
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService") -- Added UserInputService
 local Mouse = game.Players.LocalPlayer:GetMouse()
 local Plr
 
@@ -66,26 +54,9 @@ function FindClosestPlayer()
     return closestPlayer
 end
 
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == MouseLock.Settings.Key then
-        if MouseLock.Settings.Enabled == true then
-            MouseLock.Settings.Enabled = false
-            Plr = FindClosestPlayer()
-        else
-            Plr = FindClosestPlayer()
-            MouseLock.Settings.Enabled = true
-        end
-    end
-end)
 
-RunService.Stepped:Connect(function()
-    if MouseLock.Settings.Enabled == true then
-        local Vector = CurrentCamera:WorldToScreenPoint(Plr.Character[MouseLock.Settings.AimPart].Position +
-                                                            (Plr.Character[MouseLock.Settings.AimPart].Velocity *
-                                                                MouseLock.Settings.Prediction))
-        mousemoverel(Vector.X - Mouse.X, Vector.Y - Mouse.Y)
-    end
-end)
+
+
 
 
 ---- fly script
@@ -301,7 +272,7 @@ local MouselockSection = CombatAssistanceTab:AddSection({
 
 MouselockSection:AddToggle({
     Name = "Enable Combat Lock Assistance",
-    Default = false, 
+    Default = MouseLock.Settings.Enabled, 
     Callback = function(Value)
 		MouseLock.Settings.Enabled = Value
     end
@@ -309,12 +280,34 @@ MouselockSection:AddToggle({
 
 MouselockSection:AddBind({
 	Name = "Combat Lock Assistance",
-	Default = Enum.KeyCode.Q,
+	Default = MouseLock.Settings.Key,
 	Hold = false,
-	Callback = function(Value)
-        MouseLock.Settings.Key = Value
+	Callback = function()
+        if MouseLock.Settings.Enabled == true then 
+            UserInputService.InputBegan:Connect(function(input)
+                if input.KeyCode == MouseLock.Settings.Key then
+                    if MouseLock.Settings.Enabled == true then
+                        MouseLock.Settings.Enabled = false
+                        Plr = FindClosestPlayer()
+                    else
+                        Plr = FindClosestPlayer()
+                        MouseLock.Settings.Enabled = true
+            
+                    end
+                end
+            end)           
+        end
 	end    
 })
+RunService.Stepped:Connect(function()
+    if MouseLock.Settings.Enabled == true then
+        local Vector = CurrentCamera:WorldToScreenPoint(Plr.Character[MouseLock.Settings.AimPart].Position +
+                                                            (Plr.Character[MouseLock.Settings.AimPart].Velocity *
+                                                                MouseLock.Settings.Prediction))
+        mousemoverel(Vector.X - Mouse.X, Vector.Y - Mouse.Y)
+    end
+end) 
+
 
 MouselockSection:AddSlider({
 	Name = "Prediction Value",
@@ -322,7 +315,7 @@ MouselockSection:AddSlider({
 	Max = 1,
 	Default = 0.129,
 	Color = Color3.fromRGB(255,255,255),
-	Increment = 4,
+	Increment = 0.001,
 	ValueName = "studs",
 	Callback = function(Value)
         MouseLock.Settings.Prediction = Value
@@ -331,12 +324,15 @@ MouselockSection:AddSlider({
 
 MouselockSection:AddDropdown({
 	Name = "Hitbox Selection",
-	Default = "2",
+	Default = "HumanoidRootPart",
 	Options = {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso"},
 	Callback = function(Value)
         MouseLock.Settings.AimPart = Value
 	end    
 })
+
+
+
 
 ----  esp section
 local ESPSection = ESPTab:AddSection({
