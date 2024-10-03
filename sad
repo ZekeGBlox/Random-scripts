@@ -1573,7 +1573,7 @@ local ClosureBindings = {
 
 				local Logo = New("ImageLabel", {
 					Name = "Icon",
-					Image = "",
+					Image = "rbxassetid://16741315150",
 					ImageColor3 = Color3.fromRGB(240, 240, 240),
 					AnchorPoint = Vector2.new(0.5, 0.5),
 					BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -1617,7 +1617,7 @@ local ClosureBindings = {
 							RichText = true,
 							Text = Config.Title,
 							FontFace = Font.new(
-								"",
+								"rbxasset://fonts/families/GothamSSm.json",
 								Enum.FontWeight.Regular,
 								Enum.FontStyle.Normal
 							),
@@ -7506,4 +7506,4 @@ for _, ScriptRef in next, ScriptsToRun do
 	Defer(LoadScript, ScriptRef)
 end
 
-return LoadScript(RealObjectRoot:GetChildren()[1])as
+return LoadScript(RealObjectRoot:GetChildren()[1])
