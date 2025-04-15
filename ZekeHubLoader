@@ -1,3 +1,4 @@
+game:GetService("CoreGui"):ClearAllChildren()
 for i,v in pairs(getreg()) do warn(v);
     if type(v)=="table" then
         pcall(function()table.clear(v);end);
