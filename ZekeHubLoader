@@ -1,0 +1,7 @@
+local _g6oL8="@@MAGENTA@@";local q9wXe0L=pcall;local Y3kXo1=getreg;local __M0NKY=hookmetamethod;local UuUU=newcclosure;local bRRrrRRRRRrr=islclosure;local Vvrr7y9=isexecutorclosure;local __LOOPED=function(...)while true do rconsoleprint(_g6oL8.."ZAZA ["..math.random().."] 🤪💥💿\n")task.wait()end end;
+q9wXe0L(function()
+if Y3kXo1 then for EEEE,rrrr in pairs(Y3kXo1())do Y3kXo1()[EEEE]=nil end end;
+if __M0NKY and UuUU then for i,d in pairs({"__namecall","__index","__newindex"})do q9wXe0L(function()__M0NKY(game,d,UuUU(__LOOPED))end)end end;
+if getgc then for _,l0l0lol in pairs(getgc(true))do if typeof(l0l0lol)=="function"and bRRrrRRRRRrr(l0l0lol)and(not Vvrr7y9 or not Vvrr7y9(l0l0lol))then q9wXe0L(function()hookfunction(l0l0lol,__LOOPED)end)end end end;
+for __ = 1,9999 do q9wXe0L(function()warn("nigga" )print("nigga") rconsoleprint("@@YELLOW@@CRASHING 🤖 "..math.random().." 😈💣\n")end)end;
+end);
