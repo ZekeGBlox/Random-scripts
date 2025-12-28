@@ -1,0 +1,196 @@
+-- i hope this shit ufcking works 
+
+local BufferUtils = {}
+
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local FireServer = Instance.new("RemoteEvent").FireServer
+
+local RemoteEvent = ReplicatedStorage:WaitForChild("###zzz###")
+local CachedObjects = {}
+local CurrentPosition = 0
+local BufferSize = 0
+local BufferCapacity = 64
+local CurrentBuffer = buffer.create(64)
+local ObjectIndex = 0
+local ObjectTable = table.create(16)
+local IsProcessing = false
+
+game:GetService("RunService").Heartbeat:Connect(function()
+    if BufferSize ~= 0 and not IsProcessing then
+        IsProcessing = true
+        local SendBuffer = buffer.create(BufferSize)
+        buffer.copy(SendBuffer, 0, CurrentBuffer, 0, BufferSize)
+        FireServer(RemoteEvent, SendBuffer, ObjectTable)
+        BufferSize = 0
+        BufferCapacity = 64
+        CurrentBuffer = buffer.create(64)
+        CurrentPosition = 0
+        table.clear(ObjectTable)
+        IsProcessing = false
+    end
+end)
+
+
+
+BufferUtils.WriteU8 = function(Value)
+    if BufferSize + 1 > BufferCapacity then
+        while BufferSize + 1 > BufferCapacity do
+            BufferCapacity = BufferCapacity * 2
+        end
+        local NewBuffer = buffer.create(BufferCapacity)
+        buffer.copy(NewBuffer, 0, CurrentBuffer, 0, BufferSize)
+        CurrentBuffer = NewBuffer
+    end
+    CurrentPosition = BufferSize
+    BufferSize = BufferSize + 1
+    buffer.writeu8(CurrentBuffer, CurrentPosition, Value)
+end
+
+BufferUtils.WriteU16 = function(Value)
+    if BufferSize + 2 > BufferCapacity then
+        while BufferSize + 2 > BufferCapacity do
+            BufferCapacity = BufferCapacity * 2
+        end
+        local NewBuffer = buffer.create(BufferCapacity)
+        buffer.copy(NewBuffer, 0, CurrentBuffer, 0, BufferSize)
+        CurrentBuffer = NewBuffer
+    end
+    CurrentPosition = BufferSize
+    BufferSize = BufferSize + 2
+    buffer.writeu16(CurrentBuffer, CurrentPosition, Value)
+end
+
+BufferUtils.WriteU32 = function(Value)
+    if BufferSize + 4 > BufferCapacity then
+        while BufferSize + 4 > BufferCapacity do
+            BufferCapacity = BufferCapacity * 2
+        end
+        local NewBuffer = buffer.create(BufferCapacity)
+        buffer.copy(NewBuffer, 0, CurrentBuffer, 0, BufferSize)
+        CurrentBuffer = NewBuffer
+    end
+    CurrentPosition = BufferSize
+    BufferSize = BufferSize + 4
+    buffer.writeu32(CurrentBuffer, CurrentPosition, Value)
+end
+
+BufferUtils.WriteI8 = function(Value)
+    if BufferSize + 1 > BufferCapacity then
+        while BufferSize + 1 > BufferCapacity do
+            BufferCapacity = BufferCapacity * 2
+        end
+        local NewBuffer = buffer.create(BufferCapacity)
+        buffer.copy(NewBuffer, 0, CurrentBuffer, 0, BufferSize)
+        CurrentBuffer = NewBuffer
+    end
+    CurrentPosition = BufferSize
+    BufferSize = BufferSize + 1
+    buffer.writei8(CurrentBuffer, CurrentPosition, Value)
+end
+
+BufferUtils.WriteI16 = function(Value)
+    if BufferSize + 2 > BufferCapacity then
+        while BufferSize + 2 > BufferCapacity do
+            BufferCapacity = BufferCapacity * 2
+        end
+        local NewBuffer = buffer.create(BufferCapacity)
+        buffer.copy(NewBuffer, 0, CurrentBuffer, 0, BufferSize)
+        CurrentBuffer = NewBuffer
+    end
+    CurrentPosition = BufferSize
+    BufferSize = BufferSize + 2
+    buffer.writei16(CurrentBuffer, CurrentPosition, Value)
+end
+
+BufferUtils.WriteI32 = function(Value)
+    if BufferSize + 4 > BufferCapacity then
+        while BufferSize + 4 > BufferCapacity do
+            BufferCapacity = BufferCapacity * 2
+        end
+        local NewBuffer = buffer.create(BufferCapacity)
+        buffer.copy(NewBuffer, 0, CurrentBuffer, 0, BufferSize)
+        CurrentBuffer = NewBuffer
+    end
+    CurrentPosition = BufferSize
+    BufferSize = BufferSize + 4
+    buffer.writei32(CurrentBuffer, CurrentPosition, Value)
+end
+
+BufferUtils.WriteF32 = function(Value)
+    if BufferSize + 4 > BufferCapacity then
+        while BufferSize + 4 > BufferCapacity do
+            BufferCapacity = BufferCapacity * 2
+        end
+        local NewBuffer = buffer.create(BufferCapacity)
+        buffer.copy(NewBuffer, 0, CurrentBuffer, 0, BufferSize)
+        CurrentBuffer = NewBuffer
+    end
+    CurrentPosition = BufferSize
+    BufferSize = BufferSize + 4
+    buffer.writef32(CurrentBuffer, CurrentPosition, Value)
+end
+
+BufferUtils.WriteF64 = function(Value)
+    if BufferSize + 8 > BufferCapacity then
+        while BufferSize + 8 > BufferCapacity do
+            BufferCapacity = BufferCapacity * 2
+        end
+        local NewBuffer = buffer.create(BufferCapacity)
+        buffer.copy(NewBuffer, 0, CurrentBuffer, 0, BufferSize)
+        CurrentBuffer = NewBuffer
+    end
+    CurrentPosition = BufferSize
+    BufferSize = BufferSize + 8
+    buffer.writef64(CurrentBuffer, CurrentPosition, Value)
+end
+
+BufferUtils.WriteString = function(Value)
+    local StringLength = string.len(Value)
+    if BufferSize + 2 > BufferCapacity then
+        while BufferSize + 2 > BufferCapacity do
+            BufferCapacity = BufferCapacity * 2
+        end
+        local NewBuffer = buffer.create(BufferCapacity)
+        buffer.copy(NewBuffer, 0, CurrentBuffer, 0, BufferSize)
+        CurrentBuffer = NewBuffer
+    end
+    CurrentPosition = BufferSize
+    BufferSize = BufferSize + 2
+    buffer.writeu16(CurrentBuffer, CurrentPosition, StringLength)
+    if BufferSize + StringLength > BufferCapacity then
+        while BufferSize + StringLength > BufferCapacity do
+            BufferCapacity = BufferCapacity * 2
+        end
+        local NewBuffer = buffer.create(BufferCapacity)
+        buffer.copy(NewBuffer, 0, CurrentBuffer, 0, BufferSize)
+        CurrentBuffer = NewBuffer
+    end
+    CurrentPosition = BufferSize
+    BufferSize = BufferSize + StringLength
+    buffer.writestring(CurrentBuffer, CurrentPosition, Value, StringLength)
+end
+
+BufferUtils.WriteObject = function(Value)
+    if BufferSize + 1 > BufferCapacity then
+        while BufferSize + 1 > BufferCapacity do
+            BufferCapacity = BufferCapacity * 2
+        end
+        local NewBuffer = buffer.create(BufferCapacity)
+        buffer.copy(NewBuffer, 0, CurrentBuffer, 0, BufferSize)
+        CurrentBuffer = NewBuffer
+    end
+    CurrentPosition = BufferSize
+    BufferSize = BufferSize + 1
+    local ExistingIndex = table.find(ObjectTable, Value)
+    if ExistingIndex then
+        buffer.writeu8(CurrentBuffer, CurrentPosition, ExistingIndex)
+        return
+    else
+        ObjectIndex = ObjectIndex + 1
+        ObjectTable[ObjectIndex] = Value
+        buffer.writeu8(CurrentBuffer, CurrentPosition, ObjectIndex)
+        return
+    end
+end
+return BufferUtils
