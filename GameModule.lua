@@ -30,13 +30,11 @@ do -- bad business [1168263273]
     
     if TS then
         local function GetBulletSpeed()
-            if TS and TS.Items then
-                for item, controller in next, TS.Items:GetControllers() do
-                    if controller.Equipped and controller.Owner == LocalPlayer then
-                        local config = TS.Items:GetConfig(item);
-                        if config and config.Projectile and config.Projectile.Speed then
-                            return config.Projectile.Speed;
-                        end;
+            for item, controller in next, TS.Items:GetControllers() do
+                if controller.Equipped then
+                    local config = TS.Items:GetConfig(item);
+                    if config and config.Projectile and config.Projectile.Speed then
+                        return config.Projectile.Speed;
                     end;
                 end;
             end;
@@ -50,7 +48,7 @@ do -- bad business [1168263273]
                     return char.Body;
                 end;
             end;
-            return player.Character;
+            return nil;
         end;
         
         GameModules[1168263273] = {
@@ -77,27 +75,23 @@ do -- bad business [1168263273]
             end,
             
             getWeapon = function(player)
+                local character = GetCharacterBody(player);
+                if not character then return "Unarmed"; end;
+                
                 if TS and TS.Items then
                     for item, controller in next, TS.Items:GetControllers() do
-                        if controller.Equipped then
-                            local character = GetCharacterBody(player);
-                            if character then
-                                local tool = character:FindFirstChildOfClass("Tool");
-                                if tool and tool == item then
-                                    return item.Name or "Unknown";
-                                end;
+                        if controller.Equipped and controller.Owner == player then
+                            local config = TS.Items:GetConfig(item);
+                            if config and config.Name then
+                                return config.Name;
                             end;
-                            if controller.Owner == player then
-                                return item.Name or "Unknown";
-                            end;
+                            return item.Name or "Unknown";
                         end;
                     end;
                 end;
-                local character = GetCharacterBody(player);
-                if character then
-                    local tool = character:FindFirstChildOfClass("Tool");
-                    if tool then return tool.Name; end;
-                end;
+                
+                local tool = character:FindFirstChildOfClass("Tool");
+                if tool then return tool.Name; end;
                 return "Unarmed";
             end,
             
@@ -120,11 +114,9 @@ do -- bad business [1168263273]
                     if not humanoid or humanoid.Health <= 0 then continue; end;
                     
                     if shared.teamCheck then
-                        if TS and TS.Teams then
-                            local localTeam = TS.Teams:GetPlayerTeam(LocalPlayer);
-                            local playerTeam = TS.Teams:GetPlayerTeam(player);
-                            if localTeam and playerTeam and localTeam == playerTeam then continue; end;
-                        end;
+                        local localTeam = TS.Teams:GetPlayerTeam(LocalPlayer);
+                        local playerTeam = TS.Teams:GetPlayerTeam(player);
+                        if localTeam and playerTeam and localTeam == playerTeam then continue; end;
                     end;
                     
                     local targetPart = character:FindFirstChild(shared.hitbox or "Head") or character:FindFirstChild("Head");
@@ -165,8 +157,7 @@ do -- bad business [1168263273]
                 
                 local thisModule = GameModules[1168263273];
                 
-                local oldInitProjectile;
-                oldInitProjectile = hookfunction(TS.Projectiles.InitProjectile, LPH_NO_VIRTUALIZE(function(self, ...)
+                hookManager:hook("BB_InitProjectile", TS.Projectiles.InitProjectile, LPH_NO_VIRTUALIZE(function(self, ...)
                     local args = {...};
                     
                     if #args >= 4 and args[4] == LocalPlayer then
@@ -188,45 +179,62 @@ do -- bad business [1168263273]
                         end;
                     end;
                     
-                    return oldInitProjectile(self, unpack(args));
+                    local result = hooks(self, unpack(args));
+                    
+                    if result and type(result) == "table" then
+                        if Toggles.noGravity and Toggles.noGravity.Value then
+                            if result.Gravity then
+                                result.Gravity = 0;
+                            end;
+                        end;
+                        if Toggles.bulletSpeed and Toggles.bulletSpeed.Value then
+                            if result.Velocity then
+                                result.Velocity = result.Velocity.Unit * (result.Velocity.Magnitude * (Options.bulletSpeedMultiplier and Options.bulletSpeedMultiplier.Value or 10));
+                            end;
+                        end;
+                    end;
+                    
+                    return result;
                 end));
                 
-                local oldRecoilFire;
                 if TS.Camera and TS.Camera.Recoil and TS.Camera.Recoil.Fire then
-                    oldRecoilFire = hookfunction(TS.Camera.Recoil.Fire, LPH_NO_VIRTUALIZE(function(self, ...)
+                    hookManager:hook("BB_RecoilFire", TS.Camera.Recoil.Fire, LPH_NO_VIRTUALIZE(function(self, ...)
                         if Toggles.noRecoil and Toggles.noRecoil.Value then return; end;
-                        return oldRecoilFire(self, ...);
+                        return hooks(self, ...);
                     end));
                 end;
                 
-                local oldChoke;
-                if TS.Input and TS.Input.Reticle and TS.Input.Reticle.Choke then
-                    oldChoke = hookfunction(TS.Input.Reticle.Choke, LPH_NO_VIRTUALIZE(function(self, ...)
-                        if Toggles.noSpread and Toggles.noSpread.Value then return Vector3.zero; end;
-                        return oldChoke(self, ...);
-                    end));
-                end;
-                
-                local oldLookVector;
                 if TS.Input and TS.Input.Reticle and TS.Input.Reticle.LookVector then
-                    oldLookVector = hookfunction(TS.Input.Reticle.LookVector, LPH_NO_VIRTUALIZE(function(self, choke, ...)
+                    hookManager:hook("BB_LookVector", TS.Input.Reticle.LookVector, LPH_NO_VIRTUALIZE(function(self, ...)
+                        local args = {...};
                         if Toggles.noSpread and Toggles.noSpread.Value then
-                            choke = 0;
+                            if #args > 0 then
+                                args[1] = 0;
+                            end;
                         end;
-                        return oldLookVector(self, choke, ...);
+                        return hooks(self, unpack(args));
+                    end));
+                end;
+                
+                if TS.Input and TS.Input.Reticle and TS.Input.Reticle.Choke then
+                    hookManager:hook("BB_Choke", TS.Input.Reticle.Choke, LPH_NO_VIRTUALIZE(function(self, ...)
+                        if Toggles.noSpread and Toggles.noSpread.Value then
+                            return Vector3.zero;
+                        end;
+                        return hooks(self, ...);
                     end));
                 end;
             end,
             
             buildUI = function(Tabs, Client, Shared)
-                if Options.silentAimMethod then
-                    Options.silentAimMethod:SetValue("Raycast");
-                    Options.silentAimMethod:Destroy();
-                end;
-                
                 local gunModsGroup = Tabs.Main:AddLeftGroupbox("Gun Mods");
                 gunModsGroup:AddToggle("noRecoil", {Text = "No Recoil"});
                 gunModsGroup:AddToggle("noSpread", {Text = "No Spread"});
+                gunModsGroup:AddToggle("noGravity", {Text = "No Bullet Drop"});
+                gunModsGroup:AddToggle("bulletSpeed", {Text = "Bullet Speed"});
+                local bulletSpeedSettings = gunModsGroup:AddDependencyBox();
+                bulletSpeedSettings:AddSlider("bulletSpeedMultiplier", {Text = "Multiplier", Min = 1, Max = 20, Default = 10, Rounding = 0});
+                bulletSpeedSettings:SetupDependencies({{Toggles.bulletSpeed, true}});
             end,
             
             Unload = function()
