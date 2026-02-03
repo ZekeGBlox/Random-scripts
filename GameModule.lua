@@ -6,16 +6,20 @@ end;
 
 local Services = loadstring(game:HttpGet("https://zekehub.com/scripts/Utility/Services.lua"))();
 
-local Players, Workspace, ReplicatedStorage = Services:Get('Players', 'Workspace', 'ReplicatedStorage');
+local Players, Workspace, ReplicatedStorage, RunService = Services:Get('Players', 'Workspace', 'ReplicatedStorage', 'RunService');
 local LocalPlayer = Players.LocalPlayer;
 local CurrentCamera = Workspace.CurrentCamera;
 
 local GameModules = {};
 
-do
+do -- bad business [1168263273]
     local TS = nil;
     local storedClient = nil;
     local storedShared = nil;
+    local storedESP = nil;
+    local espObjects = {};
+    local chamObjects = {};
+    local characterTrackingConnection = nil;
     
     pcall(function()
         local TSModule = require(ReplicatedStorage:WaitForChild("TS", 5));
@@ -74,66 +78,224 @@ do
             return 100, 100;
         end;
         
+        local function IsFriendly(player)
+            if TS and TS.Teams then
+                local success, result = pcall(function()
+                    local localTeam = TS.Teams:GetPlayerTeam(LocalPlayer);
+                    local playerTeam = TS.Teams:GetPlayerTeam(player);
+                    return localTeam and playerTeam and localTeam == playerTeam;
+                end);
+                if success then return result; end;
+            end;
+            return player.Team and player.Team == LocalPlayer.Team;
+        end;
+        
+        local function GetWeaponForPlayer(player)
+            if TS and TS.Items then
+                local success, result = pcall(function()
+                    for item, controller in next, TS.Items:GetControllers() do
+                        if controller.Equipped and controller.Owner == player then
+                            local config = TS.Items:GetConfig(item);
+                            if config and config.Name then
+                                return config.Name;
+                            end;
+                            return item.Name or "Unknown";
+                        end;
+                    end;
+                    return "Unarmed";
+                end);
+                if success then return result; end;
+            end;
+            return "Unarmed";
+        end;
+        
+        local function CreateEspForCharacter(player, charModel, ESP)
+            if not charModel or not charModel.Parent then return; end;
+            if player == LocalPlayer then return; end;
+            
+            local body = charModel:FindFirstChild("Body");
+            if not body then return; end;
+            
+            if espObjects[player] then
+                espObjects[player]:Destruct();
+                espObjects[player] = nil;
+            end;
+            if chamObjects[player] then
+                chamObjects[player]:Destruct();
+                chamObjects[player] = nil;
+            end;
+            
+            local isFriendly = IsFriendly(player);
+            
+            local function getOptions()
+                local teamType = isFriendly and "friendly" or "enemy";
+                local baseOptions = ESP.teamSettings[teamType];
+                return {
+                    enabled = baseOptions.enabled,
+                    box = baseOptions.box,
+                    boxColor = baseOptions.boxColor,
+                    boxOutline = baseOptions.boxOutline,
+                    boxOutlineColor = baseOptions.boxOutlineColor,
+                    boxFill = baseOptions.boxFill,
+                    boxFillColor = baseOptions.boxFillColor,
+                    healthBar = baseOptions.healthBar,
+                    healthyColor = baseOptions.healthyColor,
+                    dyingColor = baseOptions.dyingColor,
+                    healthBarOutline = baseOptions.healthBarOutline,
+                    healthBarOutlineColor = baseOptions.healthBarOutlineColor,
+                    healthText = baseOptions.healthText,
+                    healthTextColor = baseOptions.healthTextColor,
+                    healthTextOutline = baseOptions.healthTextOutline,
+                    healthTextOutlineColor = baseOptions.healthTextOutlineColor,
+                    box3d = baseOptions.box3d,
+                    box3dColor = baseOptions.box3dColor,
+                    name = baseOptions.name,
+                    nameColor = baseOptions.nameColor,
+                    nameOutline = baseOptions.nameOutline,
+                    nameOutlineColor = baseOptions.nameOutlineColor,
+                    weapon = baseOptions.weapon,
+                    weaponColor = baseOptions.weaponColor,
+                    weaponOutline = baseOptions.weaponOutline,
+                    weaponOutlineColor = baseOptions.weaponOutlineColor,
+                    weaponText = GetWeaponForPlayer(player),
+                    distance = baseOptions.distance,
+                    distanceColor = baseOptions.distanceColor,
+                    distanceOutline = baseOptions.distanceOutline,
+                    distanceOutlineColor = baseOptions.distanceOutlineColor,
+                    tracer = baseOptions.tracer,
+                    tracerOrigin = baseOptions.tracerOrigin,
+                    tracerColor = baseOptions.tracerColor,
+                    tracerOutline = baseOptions.tracerOutline,
+                    tracerOutlineColor = baseOptions.tracerOutlineColor,
+                    offScreenArrow = baseOptions.offScreenArrow,
+                    offScreenArrowColor = baseOptions.offScreenArrowColor,
+                    offScreenArrowSize = baseOptions.offScreenArrowSize,
+                    offScreenArrowRadius = baseOptions.offScreenArrowRadius,
+                    offScreenArrowOutline = baseOptions.offScreenArrowOutline,
+                    offScreenArrowOutlineColor = baseOptions.offScreenArrowOutlineColor,
+                    chams = baseOptions.chams,
+                    chamsVisibleOnly = baseOptions.chamsVisibleOnly,
+                    chamsFillColor = baseOptions.chamsFillColor,
+                    chamsOutlineColor = baseOptions.chamsOutlineColor,
+                };
+            end;
+            
+            ESP.getHealth = function(character)
+                if not character then return 0, 100; end;
+                if character.Name == "Body" and character.Parent then
+                    return GetHealthFromModel(character.Parent);
+                end;
+                if character:FindFirstChild("Health") then
+                    return GetHealthFromModel(character);
+                end;
+                if character.Parent and character.Parent:FindFirstChild("Health") then
+                    return GetHealthFromModel(character.Parent);
+                end;
+                return 100, 100;
+            end;
+            
+            espObjects[player] = ESP.AddInstanceEsp(body, getOptions);
+            
+            if ESP.InstanceChamObject then
+                chamObjects[player] = ESP.InstanceChamObject.new(body, ESP, getOptions);
+            end;
+            
+            local healthValue = charModel:FindFirstChild("Health");
+            if healthValue then
+                local conn;
+                conn = healthValue.Changed:Connect(function(newHealth)
+                    if newHealth <= 0 then
+                        if espObjects[player] then
+                            espObjects[player]:Destruct();
+                            espObjects[player] = nil;
+                        end;
+                        if chamObjects[player] then
+                            chamObjects[player]:Destruct();
+                            chamObjects[player] = nil;
+                        end;
+                        conn:Disconnect();
+                    end;
+                end);
+            end;
+        end;
+        
+        local function SetupCharacterTracking(ESP)
+            storedESP = ESP;
+            
+            if TS and TS.Characters then
+                local charactersFolder = nil;
+                pcall(function()
+                    for _, folder in next, Workspace:GetChildren() do
+                        if folder.Name == "Characters" or folder.Name == "characters" then
+                            charactersFolder = folder;
+                            break;
+                        end;
+                    end;
+                end);
+                
+                for _, player in next, Players:GetPlayers() do
+                    if player ~= LocalPlayer then
+                        local charModel = GetCharacterModel(player);
+                        if charModel then
+                            CreateEspForCharacter(player, charModel, ESP);
+                        end;
+                    end;
+                end;
+                
+                characterTrackingConnection = RunService.Heartbeat:Connect(function()
+                    for _, player in next, Players:GetPlayers() do
+                        if player ~= LocalPlayer then
+                            local charModel = GetCharacterModel(player);
+                            local body = charModel and charModel:FindFirstChild("Body");
+                            
+                            if body and body.Parent then
+                                if not espObjects[player] or not espObjects[player].instance or not espObjects[player].instance.Parent then
+                                    CreateEspForCharacter(player, charModel, ESP);
+                                end;
+                            else
+                                if espObjects[player] then
+                                    espObjects[player]:Destruct();
+                                    espObjects[player] = nil;
+                                end;
+                                if chamObjects[player] then
+                                    chamObjects[player]:Destruct();
+                                    chamObjects[player] = nil;
+                                end;
+                            end;
+                        end;
+                    end;
+                end);
+            end;
+        end;
+        
         GameModules[1168263273] = {
             Name = "Bad Business",
+            useCustomEsp = true,
             
-            -- Returns Body folder - contains Head, Chest, Hips, Arms, Legs
-            -- ESP will iterate these parts for bounding box
             getCharacter = function(player)
                 return GetCharacterBody(player);
             end,
             
-            -- Health is stored on parent model (not Body folder)
             getHealth = function(character)
                 if not character then return 0, 100; end;
-                
-                -- character is the Body folder, health is on parent
                 if character.Name == "Body" and character.Parent then
                     return GetHealthFromModel(character.Parent);
                 end;
-                
-                -- Fallback: maybe we got full model
                 if character:FindFirstChild("Health") then
                     return GetHealthFromModel(character);
                 end;
-                
-                -- Try parent
                 if character.Parent and character.Parent:FindFirstChild("Health") then
                     return GetHealthFromModel(character.Parent);
                 end;
-                
                 return 100, 100;
             end,
             
             isFriendly = function(player)
-                if TS and TS.Teams then
-                    local success, result = pcall(function()
-                        local localTeam = TS.Teams:GetPlayerTeam(LocalPlayer);
-                        local playerTeam = TS.Teams:GetPlayerTeam(player);
-                        return localTeam and playerTeam and localTeam == playerTeam;
-                    end);
-                    if success then return result; end;
-                end;
-                return player.Team and player.Team == LocalPlayer.Team;
+                return IsFriendly(player);
             end,
             
             getWeapon = function(player)
-                if TS and TS.Items then
-                    local success, result = pcall(function()
-                        for item, controller in next, TS.Items:GetControllers() do
-                            if controller.Equipped and controller.Owner == player then
-                                local config = TS.Items:GetConfig(item);
-                                if config and config.Name then
-                                    return config.Name;
-                                end;
-                                return item.Name or "Unknown";
-                            end;
-                        end;
-                        return "Unarmed";
-                    end);
-                    if success then return result; end;
-                end;
-                return "Unarmed";
+                return GetWeaponForPlayer(player);
             end,
             
             getClosestPlayer = function(Client, Shared)
@@ -155,14 +317,7 @@ do
                     local health, _ = GetHealthFromModel(charModel);
                     if health <= 0 then continue; end;
                     
-                    if shared.teamCheck and TS and TS.Teams then
-                        local success, isSameTeam = pcall(function()
-                            local localTeam = TS.Teams:GetPlayerTeam(LocalPlayer);
-                            local playerTeam = TS.Teams:GetPlayerTeam(player);
-                            return localTeam and playerTeam and localTeam == playerTeam;
-                        end);
-                        if success and isSameTeam then continue; end;
-                    end;
+                    if shared.teamCheck and IsFriendly(player) then continue; end;
                     
                     local targetPart = body:FindFirstChild(shared.hitbox or "Head") or body:FindFirstChild("Head") or body:FindFirstChild("Chest");
                     if not targetPart then continue; end;
@@ -280,6 +435,10 @@ do
                 end;
             end,
             
+            setupEsp = function(ESP)
+                SetupCharacterTracking(ESP);
+            end,
+            
             buildUI = function(Tabs, Client, Shared)
                 local gunModsGroup = Tabs.Main:AddLeftGroupbox("Gun Mods");
                 gunModsGroup:AddToggle("noRecoil", {Text = "No Recoil"});
@@ -292,8 +451,28 @@ do
             end,
             
             Unload = function()
+                if characterTrackingConnection then
+                    characterTrackingConnection:Disconnect();
+                    characterTrackingConnection = nil;
+                end;
+                
+                for player, obj in next, espObjects do
+                    if obj and obj.Destruct then
+                        obj:Destruct();
+                    end;
+                end;
+                table.clear(espObjects);
+                
+                for player, obj in next, chamObjects do
+                    if obj and obj.Destruct then
+                        obj:Destruct();
+                    end;
+                end;
+                table.clear(chamObjects);
+                
                 storedClient = nil;
                 storedShared = nil;
+                storedESP = nil;
             end,
         };
     end;
