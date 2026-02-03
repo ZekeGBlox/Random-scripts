@@ -139,7 +139,7 @@ do -- bad business [1168263273]
                 
                 hookManager:hook("BB_InitProjectile", TS.Projectiles.InitProjectile, LPH_NO_VIRTUALIZE(function(self, projectileType, position, direction, owner, ...)
                     if typeof(position) ~= "Vector3" or typeof(direction) ~= "Vector3" then
-                        return hooks("BB_InitProjectile", self, projectileType, position, direction, owner, ...);
+                        return hooks.BB_InitProjectile(self, projectileType, position, direction, owner, ...);
                     end;
                     
                     local newDirection = direction;
@@ -167,20 +167,20 @@ do -- bad business [1168263273]
                         end;
                     end;
                     
-                    return hooks("BB_InitProjectile", self, projectileType, position, newDirection, owner, ...);
+                    return hooks.BB_InitProjectile(self, projectileType, position, newDirection, owner, ...);
                 end));
                 
                 if TS.Camera and TS.Camera.Recoil and TS.Camera.Recoil.Fire then
                     hookManager:hook("BB_RecoilFire", TS.Camera.Recoil.Fire, LPH_NO_VIRTUALIZE(function(self, ...)
                         if Toggles.noRecoil and Toggles.noRecoil.Value then return; end;
-                        return hooks("BB_RecoilFire", self, ...);
+                        return hooks.BB_RecoilFire(self, ...);
                     end));
                 end;
                 
                 if TS.Input and TS.Input.Reticle and TS.Input.Reticle.Choke then
                     hookManager:hook("BB_Choke", TS.Input.Reticle.Choke, LPH_NO_VIRTUALIZE(function(self, ...)
                         if Toggles.noSpread and Toggles.noSpread.Value then return Vector3.zero; end;
-                        return hooks("BB_Choke", self, ...);
+                        return hooks.BB_Choke(self, ...);
                     end));
                 end;
                 
@@ -189,7 +189,7 @@ do -- bad business [1168263273]
                         if Toggles.noSpread and Toggles.noSpread.Value then
                             choke = 0;
                         end;
-                        return hooks("BB_LookVector", self, choke, ...);
+                        return hooks.BB_LookVector(self, choke, ...);
                     end));
                 end;
             end,
