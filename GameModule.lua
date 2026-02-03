@@ -211,6 +211,8 @@ do
                     local args = {...};
                     
                     if #args >= 4 and args[4] == LocalPlayer then
+                        print(Toggles)
+                        print(Toggles and Toggles.silentAimEnabled)
                         if Toggles and Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
                             local hitChance = 100;
                             if Options and Options.silentAimHitChance then
