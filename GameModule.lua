@@ -11,7 +11,7 @@ local LocalPlayer = Players.LocalPlayer;
 local CurrentCamera = Workspace.CurrentCamera;
 
 local GameModules = {};
--- fuck u 
+
 --[[
     =====================================
     HOW TO CREATE A CUSTOM MODULE
@@ -80,8 +80,6 @@ do -- bad business [1168263273]
     local TS = nil;
     local storedClient = nil;
     local storedShared = nil;
-    local highlights = {};
-    local chamsConnection = nil;
     
     do -- anti-crash
         local sc = game:GetService("ScriptContext"); 
@@ -186,56 +184,8 @@ do -- bad business [1168263273]
             return "Unarmed";
         end;
         
-        local function UpdateChams()
-            for _, player in next, Players:GetPlayers() do
-                if player == LocalPlayer then continue; end;
-                
-                local charModel = GetCharacterModel(player);
-                local body = charModel and charModel:FindFirstChild("Body");
-                local health, _ = GetHealthFromModel(charModel);
-                
-                local chamsEnabled = Toggles and Toggles.bbChamsEnabled and Toggles.bbChamsEnabled.Value;
-                local teamCheck = storedShared and storedShared.teamCheck;
-                local isFriendly = IsFriendly(player);
-                
-                local shouldShow = chamsEnabled and body and body.Parent and health > 0 and (not teamCheck or not isFriendly);
-                
-                if shouldShow then
-                    if not highlights[player] then
-                        local hl = Instance.new("Highlight");
-                        hl.Adornee = body;
-                        hl.Parent = game:GetService("CoreGui");
-                        highlights[player] = hl;
-                    end;
-                    
-                    local hl = highlights[player];
-                    if hl and hl.Parent then
-                        hl.Adornee = body;
-                        hl.FillColor = Options and Options.bbChamsFillColor and Options.bbChamsFillColor.Value or Color3.new(0.2, 0.2, 0.2);
-                        hl.FillTransparency = Options and Options.bbChamsFillTransparency and Options.bbChamsFillTransparency.Value or 0.5;
-                        hl.OutlineColor = Options and Options.bbChamsOutlineColor and Options.bbChamsOutlineColor.Value or Color3.new(1, 0, 0);
-                        hl.OutlineTransparency = 0;
-                        hl.DepthMode = (Toggles and Toggles.bbChamsVisibleOnly and Toggles.bbChamsVisibleOnly.Value) and Enum.HighlightDepthMode.Occluded or Enum.HighlightDepthMode.AlwaysOnTop;
-                    end;
-                else
-                    if highlights[player] then
-                        highlights[player]:Destroy();
-                        highlights[player] = nil;
-                    end;
-                end;
-            end;
-            
-            for player, hl in next, highlights do
-                if not player or not player.Parent then
-                    if hl then hl:Destroy(); end;
-                    highlights[player] = nil;
-                end;
-            end;
-        end;
-        
         GameModules[1168263273] = {
             Name = "Bad Business",
-            useCustomEsp = true,
             
             getCharacter = function(player)
                 return GetCharacterBody(player);
@@ -269,7 +219,7 @@ do -- bad business [1168263273]
                 if not client or not shared then return nil; end;
                 
                 CurrentCamera = Workspace.CurrentCamera;
-                local center = CurrentCamera.ViewportSize / 2;
+                local mousePos = game:GetService("UserInputService"):GetMouseLocation();
                 local closestPlayer, closestDistance, closestPart = nil, shared.fovRadius or 150, nil;
                 
                 for _, player in next, Players:GetPlayers() do
@@ -293,7 +243,9 @@ do -- bad business [1168263273]
                     local screenPos, onScreen = CurrentCamera:WorldToViewportPoint(targetPart.Position);
                     if not onScreen then continue; end;
                     
-                    local distance = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude;
+                    local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude;
+                    
+                    if distance > (shared.fovRadius or 150) then continue; end;
                     
                     if shared.visibleCheck then
                         local myChar = GetCharacterModel(LocalPlayer);
@@ -398,8 +350,6 @@ do -- bad business [1168263273]
                         return hooks.BB_Choke(self, ...);
                     end));
                 end;
-                
-                chamsConnection = RunService.Heartbeat:Connect(UpdateChams);
             end,
             
             buildUI = function(Tabs, Client, Shared)
@@ -411,28 +361,9 @@ do -- bad business [1168263273]
                 local bulletSpeedSettings = gunModsGroup:AddDependencyBox();
                 bulletSpeedSettings:AddSlider("bulletSpeedMultiplier", {Text = "Multiplier", Min = 1, Max = 20, Default = 10, Rounding = 0});
                 bulletSpeedSettings:SetupDependencies({{Toggles.bulletSpeed, true}});
-                
-                local chamsGroup = Tabs.Visuals:AddLeftGroupbox("Chams");
-                chamsGroup:AddToggle("bbChamsEnabled", {Text = "Enabled"});
-                local chamsSettings = chamsGroup:AddDependencyBox();
-                chamsSettings:AddLabel("Fill Color"):AddColorPicker("bbChamsFillColor", {Default = Color3.new(0.2, 0.2, 0.2)});
-                chamsSettings:AddSlider("bbChamsFillTransparency", {Text = "Fill Transparency", Min = 0, Max = 1, Default = 0.5, Rounding = 2});
-                chamsSettings:AddLabel("Outline Color"):AddColorPicker("bbChamsOutlineColor", {Default = Color3.new(1, 0, 0)});
-                chamsSettings:AddToggle("bbChamsVisibleOnly", {Text = "Visible Only"});
-                chamsSettings:SetupDependencies({{Toggles.bbChamsEnabled, true}});
             end,
             
             Unload = function()
-                if chamsConnection then
-                    chamsConnection:Disconnect();
-                    chamsConnection = nil;
-                end;
-                
-                for player, hl in next, highlights do
-                    if hl then hl:Destroy(); end;
-                end;
-                table.clear(highlights);
-                
                 storedClient = nil;
                 storedShared = nil;
             end,
