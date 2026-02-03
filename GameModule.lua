@@ -7,7 +7,76 @@ local LocalPlayer = Players.LocalPlayer;
 local CurrentCamera = Workspace.CurrentCamera;
 
 local GameModules = {};
- 
+
+--[[
+    =====================================
+    HOW TO CREATE A CUSTOM MODULE
+    =====================================
+    
+    1. Create a new entry in GameModules using the game's GameId as the key
+    2. The module should contain:
+        - Name: string (display name)
+        - getCharacter(player): function that returns the player's character
+        - getHealth(character): function that returns health, maxHealth
+        - isFriendly(player): function that returns true if player is on same team
+        - getWeapon(player): function that returns equipped weapon name
+        - getClosestPlayer(): function that finds closest valid target (optional, uses default if not provided)
+        - setupHooks(Client, Shared, hookManager, hooks): function to setup game-specific hooks
+        - buildUI(Tabs, Client, Shared): function to add custom UI elements
+        - Unload(): function to cleanup hooks when script unloads
+    
+    IMPORTANT:
+    - If setupHooks is defined, the default silent aim will NOT be used
+    - Your hooks should handle silent aim logic for that specific game
+    - Always use hookManager:hook() for hooks so they can be properly disposed
+    - Always implement Unload() to call hookManager:dispose()
+    
+    EXAMPLE USAGE:
+    
+    GameModules[YOUR_GAME_ID] = {
+        Name = "Your Game Name",
+        
+        getCharacter = function(player)
+            return player.Character;
+        end,
+        
+        getHealth = function(character)
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid");
+            if humanoid then return humanoid.Health, humanoid.MaxHealth; end;
+            return 100, 100;
+        end,
+        
+        isFriendly = function(player)
+            return player.Team and player.Team == LocalPlayer.Team;
+        end,
+        
+        getWeapon = function(player)
+            local character = player.Character;
+            if character then
+                local tool = character:FindFirstChildOfClass("Tool");
+                if tool then return tool.Name; end;
+            end;
+            return "Unarmed";
+        end,
+        
+        setupHooks = function(Client, Shared, hookManager, hooks)
+            -- Your hook logic here
+            -- Use hookManager:hook("HookName", targetFunction, hookFunction)
+            -- In hook function, call original with: hooks("HookName", self, ...)
+        end,
+        
+        buildUI = function(Tabs, Client, Shared)
+            -- Add custom UI elements
+            local customGroup = Tabs.Main:AddLeftGroupbox("Custom Features");
+            customGroup:AddToggle("customFeature", {Text = "Custom Feature"});
+        end,
+        
+        Unload = function()
+            hookManager:dispose();
+        end,
+    };
+]]
+
 do -- bad business [1168263273]
     local moduleHookManager = HookManager;
     local moduleHooks = HookAssigner:Start(moduleHookManager);
@@ -136,34 +205,37 @@ do -- bad business [1168263273]
             
             setupHooks = function(Client, Shared, hookManager, hooks)
                 if TS.Projectiles and TS.Projectiles.InitProjectile then
-                    moduleHookManager:hook("BB_InitProjectile", TS.Projectiles.InitProjectile, LPH_NO_VIRTUALIZE(function(self, ...)
-                        local args = {...};
+                    moduleHookManager:hook("BB_InitProjectile", TS.Projectiles.InitProjectile, LPH_NO_VIRTUALIZE(function(self, projectileType, position, direction, owner, ...)
+                        if typeof(position) ~= "Vector3" or typeof(direction) ~= "Vector3" then
+                            return moduleHooks("BB_InitProjectile", self, projectileType, position, direction, owner, ...);
+                        end;
                         
-                        if #args >= 4 and args[4] == LocalPlayer then
+                        local newDirection = direction;
+                        
+                        if owner == LocalPlayer then
                             if Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
                                 local chance = math.random(0, 100);
                                 if chance <= (Options.silentAimHitChance and Options.silentAimHitChance.Value or 100) then
                                     GameModules[1168263273].getClosestPlayer(Client, Shared);
                                     
                                     if Client.silentTarget.part then
-                                        local origin = args[2];
                                         local targetPos = Client.silentTarget.part.Position;
                                         
                                         if Shared.prediction then
                                             local bulletSpeed = GetBulletSpeed();
                                             local velocity = Client.silentTarget.part.AssemblyLinearVelocity or Vector3.zero;
-                                            local distance = (targetPos - origin).Magnitude;
-                                            local timeToTarget = distance / bulletSpeed;
+                                            local dist = (targetPos - position).Magnitude;
+                                            local timeToTarget = dist / bulletSpeed;
                                             targetPos = targetPos + (velocity * timeToTarget);
                                         end;
                                         
-                                        args[3] = (targetPos - origin).Unit;
+                                        newDirection = (targetPos - position).Unit;
                                     end;
                                 end;
                             end;
                         end;
                         
-                        return moduleHooks("BB_InitProjectile", self, unpack(args));
+                        return moduleHooks("BB_InitProjectile", self, projectileType, position, newDirection, owner, ...);
                     end));
                 end;
                 
@@ -182,12 +254,11 @@ do -- bad business [1168263273]
                 end;
                 
                 if TS.Input and TS.Input.Reticle and TS.Input.Reticle.LookVector then
-                    moduleHookManager:hook("BB_LookVector", TS.Input.Reticle.LookVector, LPH_NO_VIRTUALIZE(function(self, ...)
-                        local args = {...};
+                    moduleHookManager:hook("BB_LookVector", TS.Input.Reticle.LookVector, LPH_NO_VIRTUALIZE(function(self, choke, ...)
                         if Toggles.noSpread and Toggles.noSpread.Value then
-                            if #args > 0 then args[1] = 0; end;
+                            choke = 0;
                         end;
-                        return moduleHooks("BB_LookVector", self, unpack(args));
+                        return moduleHooks("BB_LookVector", self, choke, ...);
                     end));
                 end;
             end,
@@ -205,4 +276,88 @@ do -- bad business [1168263273]
     end;
 end;
 
-return GameModules;
+--[[
+    =====================================
+    EXAMPLE MODULE TEMPLATE (COMMENTED)
+    =====================================
+    
+    Copy and modify this template for new games:
+    
+    do -- your game [GAME_ID]
+        local moduleHookManager = HookManager;
+        local moduleHooks = HookAssigner:Start(moduleHookManager);
+        
+        -- Get game-specific modules here
+        local SomeGameModule = nil;
+        pcall(function()
+            SomeGameModule = require(path.to.module);
+        end);
+        
+        if SomeGameModule then
+            GameModules[YOUR_GAME_ID] = {
+                Name = "Your Game Name",
+                
+                getCharacter = function(player)
+                    -- Return the player's character
+                    -- Modify this for games with custom character systems
+                    return player.Character;
+                end,
+                
+                getHealth = function(character)
+                    -- Return health, maxHealth
+                    local humanoid = character and character:FindFirstChildOfClass("Humanoid");
+                    if humanoid then return humanoid.Health, humanoid.MaxHealth; end;
+                    return 100, 100;
+                end,
+                
+                isFriendly = function(player)
+                    -- Return true if player is friendly/teammate
+                    return player.Team and player.Team == LocalPlayer.Team;
+                end,
+                
+                getWeapon = function(player)
+                    -- Return equipped weapon name
+                    local character = player.Character;
+                    if character then
+                        local tool = character:FindFirstChildOfClass("Tool");
+                        if tool then return tool.Name; end;
+                    end;
+                    return "Unarmed";
+                end,
+                
+                getClosestPlayer = function(Client, Shared)
+                    -- Optional: Custom target finding logic
+                    -- If not provided, uses DefaultModule.getClosestPlayer
+                    -- Must update Client.silentTarget.player, Client.silentTarget.part, Client.silentTarget.distance
+                end,
+                
+                setupHooks = function(Client, Shared, hookManager, hooks)
+                    -- Setup your game-specific hooks here
+                    -- Use moduleHookManager:hook("HookName", target, callback)
+                    -- Call original with: moduleHooks("HookName", self, ...)
+                    
+                    -- Example:
+                    -- moduleHookManager:hook("MyHook", SomeGameModule.SomeFunction, function(self, ...)
+                    --     if Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
+                    --         -- Modify args for silent aim
+                    --     end;
+                    --     return moduleHooks("MyHook", self, ...);
+                    -- end);
+                end,
+                
+                buildUI = function(Tabs, Client, Shared)
+                    -- Add custom UI elements for this game
+                    local customGroup = Tabs.Main:AddLeftGroupbox("Game Features");
+                    customGroup:AddToggle("customToggle", {Text = "Custom Toggle"});
+                    customGroup:AddSlider("customSlider", {Text = "Custom Slider", Min = 0, Max = 100, Default = 50, Rounding = 0});
+                end,
+                
+                Unload = function()
+                    moduleHookManager:dispose();
+                end,
+            };
+        end;
+    end;
+]]
+
+return GameModules[game.GameId];
