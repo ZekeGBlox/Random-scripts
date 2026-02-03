@@ -12,7 +12,7 @@ local CurrentCamera = Workspace.CurrentCamera;
 
 local GameModules = {};
 
-do -- bad business [1168263273]
+do
     local TS = nil;
     local storedClient = nil;
     local storedShared = nil;
@@ -42,12 +42,20 @@ do -- bad business [1168263273]
         end;
         
         local function GetCharacterBody(player)
-            if TS and TS.Characters then
-                local char = TS.Characters:GetCharacter(player);
-                if char and char.Body and char.Body.Parent then
-                    return char.Body;
-                end;
+            if not TS or not TS.Characters then return nil; end;
+            
+            local char = nil;
+            pcall(function()
+                char = TS.Characters:GetCharacter(player);
+            end);
+            
+            if not char then return nil; end;
+            
+            local body = char:FindFirstChild("Body");
+            if body and body.Parent then
+                return body;
             end;
+            
             return nil;
         end;
         
@@ -90,8 +98,6 @@ do -- bad business [1168263273]
                     end;
                 end;
                 
-                local tool = character:FindFirstChildOfClass("Tool");
-                if tool then return tool.Name; end;
                 return "Unarmed";
             end,
             
@@ -151,7 +157,7 @@ do -- bad business [1168263273]
                 return closestPlayer;
             end,
             
-           setupHooks = function(Client, Shared, hookManager, hooks)
+            setupHooks = function(Client, Shared, hookManager, hooks)
                 storedClient = Client;
                 storedShared = Shared;
                 
