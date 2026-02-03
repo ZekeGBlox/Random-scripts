@@ -11,7 +11,7 @@ local LocalPlayer = Players.LocalPlayer;
 local CurrentCamera = Workspace.CurrentCamera;
 
 local GameModules = {};
-
+-- fuck u 
 --[[
     =====================================
     HOW TO CREATE A CUSTOM MODULE
