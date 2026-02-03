@@ -7,7 +7,7 @@ local LocalPlayer = Players.LocalPlayer;
 local CurrentCamera = Workspace.CurrentCamera;
 
 local GameModules = {};
-
+ 
 do -- bad business [1168263273]
     local moduleHookManager = HookManager;
     local moduleHooks = HookAssigner:Start(moduleHookManager);
