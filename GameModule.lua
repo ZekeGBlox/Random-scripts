@@ -151,7 +151,7 @@ do -- bad business [1168263273]
                 return closestPlayer;
             end,
             
-            setupHooks = function(Client, Shared, hookManager, hooks)
+           setupHooks = function(Client, Shared, hookManager, hooks)
                 storedClient = Client;
                 storedShared = Shared;
                 
@@ -179,7 +179,7 @@ do -- bad business [1168263273]
                         end;
                     end;
                     
-                    local result = hooks(self, unpack(args));
+                    local result = hooks.BB_InitProjectile(self, unpack(args));
                     
                     if result and type(result) == "table" then
                         if Toggles.noGravity and Toggles.noGravity.Value then
@@ -200,7 +200,7 @@ do -- bad business [1168263273]
                 if TS.Camera and TS.Camera.Recoil and TS.Camera.Recoil.Fire then
                     hookManager:hook("BB_RecoilFire", TS.Camera.Recoil.Fire, LPH_NO_VIRTUALIZE(function(self, ...)
                         if Toggles.noRecoil and Toggles.noRecoil.Value then return; end;
-                        return hooks(self, ...);
+                        return hooks.BB_RecoilFire(self, ...);
                     end));
                 end;
                 
@@ -212,7 +212,7 @@ do -- bad business [1168263273]
                                 args[1] = 0;
                             end;
                         end;
-                        return hooks(self, unpack(args));
+                        return hooks.BB_LookVector(self, unpack(args));
                     end));
                 end;
                 
@@ -221,7 +221,7 @@ do -- bad business [1168263273]
                         if Toggles.noSpread and Toggles.noSpread.Value then
                             return Vector3.zero;
                         end;
-                        return hooks(self, ...);
+                        return hooks.BB_Choke(self, ...);
                     end));
                 end;
             end,
