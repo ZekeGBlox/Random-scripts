@@ -83,6 +83,21 @@ do -- bad business [1168263273]
     local highlights = {};
     local chamsConnection = nil;
     
+    do -- anti-crash
+        local sc = game:GetService("ScriptContext"); 
+        for _, c in next, getconnections(sc.Error) do
+            if type(c.Function) == "function" then
+                for i, v in next, debug.getupvalues(c.Function) do
+                    if type(v) == "number" and tostring(v):find("%.") then
+                        task.spawn(function()
+                            while task.wait(1) do debug.setupvalue(c.Function, i, os.clock()) end;
+                        end);
+                    end;
+                end;
+            end;
+        end;
+    end;
+
     pcall(function()
         local TSModule = require(ReplicatedStorage:WaitForChild("TS", 5));
         if TSModule then
