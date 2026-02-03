@@ -30,6 +30,7 @@ do
     
     if TS then
         local function GetBulletSpeed()
+            if not TS.Items then return 2000; end;
             for item, controller in next, TS.Items:GetControllers() do
                 if controller.Equipped then
                     local config = TS.Items:GetConfig(item);
@@ -41,22 +42,57 @@ do
             return 2000;
         end;
         
-        local function GetCharacterBody(player)
+        local function GetCharacterModel(player)
             if not TS or not TS.Characters then return nil; end;
-            
             local char = nil;
             pcall(function()
                 char = TS.Characters:GetCharacter(player);
             end);
-            
+            if not char or not char.Parent then return nil; end;
+            return char;
+        end;
+        
+        local function GetCharacterBody(player)
+            local char = GetCharacterModel(player);
             if not char then return nil; end;
-            
             local body = char:FindFirstChild("Body");
             if body and body.Parent then
                 return body;
             end;
-            
             return nil;
+        end;
+        
+        local function GetHealthFromBody(body)
+            if not body then return 0, 100; end;
+            local charModel = body.Parent;
+            if not charModel then return 0, 100; end;
+            local health = charModel:FindFirstChild("Health");
+            if health then
+                local currentHealth = health.Value or 0;
+                local maxHealthObj = health:FindFirstChild("MaxHealth");
+                local maxHealthValue = maxHealthObj and maxHealthObj.Value or 100;
+                return currentHealth, maxHealthValue;
+            end;
+            return 100, 100;
+        end;
+        
+        local function GetHealthFromModel(charModel)
+            if not charModel then return 0, 100; end;
+            local health = charModel:FindFirstChild("Health");
+            if health then
+                local currentHealth = health.Value or 0;
+                local maxHealthObj = health:FindFirstChild("MaxHealth");
+                local maxHealthValue = maxHealthObj and maxHealthObj.Value or 100;
+                return currentHealth, maxHealthValue;
+            end;
+            return 100, 100;
+        end;
+        
+        local function IsAlive(player)
+            local body = GetCharacterBody(player);
+            if not body then return false; end;
+            local health, _ = GetHealthFromBody(body);
+            return health > 0;
         end;
         
         GameModules[1168263273] = {
@@ -66,38 +102,42 @@ do
                 return GetCharacterBody(player);
             end,
             
-            getHealth = function(character)
-                if not character then return 0, 100; end;
-                local humanoid = character:FindFirstChildOfClass("Humanoid");
-                if humanoid then return humanoid.Health, humanoid.MaxHealth; end;
-                return 100, 100;
+            getHealth = function(bodyOrCharacter)
+                if not bodyOrCharacter then return 0, 100; end;
+                if bodyOrCharacter:FindFirstChild("Health") then
+                    return GetHealthFromModel(bodyOrCharacter);
+                end;
+                return GetHealthFromBody(bodyOrCharacter);
             end,
             
             isFriendly = function(player)
                 if TS and TS.Teams then
-                    local localTeam = TS.Teams:GetPlayerTeam(LocalPlayer);
-                    local playerTeam = TS.Teams:GetPlayerTeam(player);
-                    return localTeam and playerTeam and localTeam == playerTeam;
+                    local success, result = pcall(function()
+                        local localTeam = TS.Teams:GetPlayerTeam(LocalPlayer);
+                        local playerTeam = TS.Teams:GetPlayerTeam(player);
+                        return localTeam and playerTeam and localTeam == playerTeam;
+                    end);
+                    if success then return result; end;
                 end;
                 return player.Team and player.Team == LocalPlayer.Team;
             end,
             
             getWeapon = function(player)
-                local character = GetCharacterBody(player);
-                if not character then return "Unarmed"; end;
-                
                 if TS and TS.Items then
-                    for item, controller in next, TS.Items:GetControllers() do
-                        if controller.Equipped and controller.Owner == player then
-                            local config = TS.Items:GetConfig(item);
-                            if config and config.Name then
-                                return config.Name;
+                    local success, result = pcall(function()
+                        for item, controller in next, TS.Items:GetControllers() do
+                            if controller.Equipped and controller.Owner == player then
+                                local config = TS.Items:GetConfig(item);
+                                if config and config.Name then
+                                    return config.Name;
+                                end;
+                                return item.Name or "Unknown";
                             end;
-                            return item.Name or "Unknown";
                         end;
-                    end;
+                        return "Unarmed";
+                    end);
+                    if success then return result; end;
                 end;
-                
                 return "Unarmed";
             end,
             
@@ -113,19 +153,22 @@ do
                 for _, player in next, Players:GetPlayers() do
                     if player == LocalPlayer then continue; end;
                     
-                    local character = GetCharacterBody(player);
-                    if not character then continue; end;
+                    local body = GetCharacterBody(player);
+                    if not body then continue; end;
                     
-                    local humanoid = character:FindFirstChildOfClass("Humanoid");
-                    if not humanoid or humanoid.Health <= 0 then continue; end;
+                    local health, _ = GetHealthFromBody(body);
+                    if health <= 0 then continue; end;
                     
-                    if shared.teamCheck then
-                        local localTeam = TS.Teams:GetPlayerTeam(LocalPlayer);
-                        local playerTeam = TS.Teams:GetPlayerTeam(player);
-                        if localTeam and playerTeam and localTeam == playerTeam then continue; end;
+                    if shared.teamCheck and TS and TS.Teams then
+                        local success, isSameTeam = pcall(function()
+                            local localTeam = TS.Teams:GetPlayerTeam(LocalPlayer);
+                            local playerTeam = TS.Teams:GetPlayerTeam(player);
+                            return localTeam and playerTeam and localTeam == playerTeam;
+                        end);
+                        if success and isSameTeam then continue; end;
                     end;
                     
-                    local targetPart = character:FindFirstChild(shared.hitbox or "Head") or character:FindFirstChild("Head");
+                    local targetPart = body:FindFirstChild(shared.hitbox or "Head") or body:FindFirstChild("Head") or body:FindFirstChild("Chest");
                     if not targetPart then continue; end;
                     
                     local worldDistance = (CurrentCamera.CFrame.Position - targetPart.Position).Magnitude;
@@ -137,10 +180,11 @@ do
                     local distance = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude;
                     
                     if shared.visibleCheck then
+                        local charModel = body.Parent;
                         local params = RaycastParams.new();
                         params.FilterType = Enum.RaycastFilterType.Exclude;
-                        params.FilterDescendantsInstances = {CurrentCamera, LocalPlayer.Character, character};
-                        local result = Workspace:Raycast(CurrentCamera.CFrame.Position, (targetPart.Position - CurrentCamera.CFrame.Position).Unit * 5000, params);
+                        params.FilterDescendantsInstances = {CurrentCamera, LocalPlayer.Character, charModel, GetCharacterModel(LocalPlayer)};
+                        local result = Workspace:Raycast(CurrentCamera.CFrame.Position, (targetPart.Position - CurrentCamera.CFrame.Position).Unit * worldDistance, params);
                         if result then continue; end;
                     end;
                     
@@ -167,18 +211,24 @@ do
                     local args = {...};
                     
                     if #args >= 4 and args[4] == LocalPlayer then
-                        if Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
+                        if Toggles and Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
+                            local hitChance = 100;
+                            if Options and Options.silentAimHitChance then
+                                hitChance = Options.silentAimHitChance.Value or 100;
+                            end;
+                            
                             local chance = math.random(0, 100);
-                            if chance <= (Options.silentAimHitChance and Options.silentAimHitChance.Value or 100) then
+                            if chance <= hitChance then
                                 thisModule.getClosestPlayer(Client, Shared);
                                 
                                 if Client.silentTarget.part then
                                     local origin = args[2];
                                     local bulletSpeed = GetBulletSpeed();
-                                    local velocity = Client.silentTarget.part.AssemblyLinearVelocity or Vector3.zero;
-                                    local distance = (Client.silentTarget.part.Position - origin).Magnitude;
+                                    local targetPart = Client.silentTarget.part;
+                                    local velocity = targetPart.AssemblyLinearVelocity or Vector3.zero;
+                                    local distance = (targetPart.Position - origin).Magnitude;
                                     local timeToTarget = distance / bulletSpeed;
-                                    local predictedPos = Client.silentTarget.part.Position + (velocity * timeToTarget);
+                                    local predictedPos = targetPart.Position + (velocity * timeToTarget);
                                     args[3] = (predictedPos - origin).Unit;
                                 end;
                             end;
@@ -188,14 +238,16 @@ do
                     local result = hooks.BB_InitProjectile(self, unpack(args));
                     
                     if result and type(result) == "table" then
-                        if Toggles.noGravity and Toggles.noGravity.Value then
-                            if result.Gravity then
-                                result.Gravity = 0;
-                            end;
+                        if Toggles and Toggles.noGravity and Toggles.noGravity.Value then
+                            result.Gravity = 0;
                         end;
-                        if Toggles.bulletSpeed and Toggles.bulletSpeed.Value then
+                        if Toggles and Toggles.bulletSpeed and Toggles.bulletSpeed.Value then
                             if result.Velocity then
-                                result.Velocity = result.Velocity.Unit * (result.Velocity.Magnitude * (Options.bulletSpeedMultiplier and Options.bulletSpeedMultiplier.Value or 10));
+                                local multiplier = 10;
+                                if Options and Options.bulletSpeedMultiplier then
+                                    multiplier = Options.bulletSpeedMultiplier.Value or 10;
+                                end;
+                                result.Velocity = result.Velocity.Unit * (result.Velocity.Magnitude * multiplier);
                             end;
                         end;
                     end;
@@ -205,7 +257,7 @@ do
                 
                 if TS.Camera and TS.Camera.Recoil and TS.Camera.Recoil.Fire then
                     hookManager:hook("BB_RecoilFire", TS.Camera.Recoil.Fire, LPH_NO_VIRTUALIZE(function(self, ...)
-                        if Toggles.noRecoil and Toggles.noRecoil.Value then return; end;
+                        if Toggles and Toggles.noRecoil and Toggles.noRecoil.Value then return; end;
                         return hooks.BB_RecoilFire(self, ...);
                     end));
                 end;
@@ -213,7 +265,7 @@ do
                 if TS.Input and TS.Input.Reticle and TS.Input.Reticle.LookVector then
                     hookManager:hook("BB_LookVector", TS.Input.Reticle.LookVector, LPH_NO_VIRTUALIZE(function(self, ...)
                         local args = {...};
-                        if Toggles.noSpread and Toggles.noSpread.Value then
+                        if Toggles and Toggles.noSpread and Toggles.noSpread.Value then
                             if #args > 0 then
                                 args[1] = 0;
                             end;
@@ -224,7 +276,7 @@ do
                 
                 if TS.Input and TS.Input.Reticle and TS.Input.Reticle.Choke then
                     hookManager:hook("BB_Choke", TS.Input.Reticle.Choke, LPH_NO_VIRTUALIZE(function(self, ...)
-                        if Toggles.noSpread and Toggles.noSpread.Value then
+                        if Toggles and Toggles.noSpread and Toggles.noSpread.Value then
                             return Vector3.zero;
                         end;
                         return hooks.BB_Choke(self, ...);
@@ -244,6 +296,8 @@ do
             end,
             
             Unload = function()
+                storedClient = nil;
+                storedShared = nil;
             end,
         };
     end;
