@@ -135,6 +135,11 @@ do -- bad business [1168263273]
             end,
             
             setupHooks = function(Client, Shared, hookManager, hooks)
+                    print("GOT HERE 1");
+                    print("hookManager:", hookManager);
+                    print("hooks:", hooks);
+                    print("TS:", TS);
+                    print("TS.Projectiles:", TS and TS.Projectiles);
                 local thisModule = GameModules[1168263273];
                 
                 hookManager:hook("BB_InitProjectile", TS.Projectiles.InitProjectile, LPH_NO_VIRTUALIZE(function(self, projectileType, position, direction, owner, ...)
