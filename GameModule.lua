@@ -6,7 +6,7 @@ end;
 
 local Services = loadstring(game:HttpGet("https://zekehub.com/scripts/Utility/Services.lua"))();
 
-local Players, Workspace, ReplicatedStorage = Services:Get('Players', 'Workspace', 'ReplicatedStorage');
+local Players, Workspace, ReplicatedStorage, RunService = Services:Get('Players', 'Workspace', 'ReplicatedStorage', 'RunService');
 local LocalPlayer = Players.LocalPlayer;
 local CurrentCamera = Workspace.CurrentCamera;
 
