@@ -360,4 +360,4 @@ end;
     end;
 ]]
 
-return GameModules[game.GameId];
+return GameModules;
