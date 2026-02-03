@@ -3,8 +3,6 @@ if not LPH_OBFUSCATED then
 end
 
 local Services = loadstring(game:HttpGet("https://zekehub.com/scripts/Utility/Services.lua"))();
-local HookManager = loadstring(game:HttpGet("https://zekehub.com/scripts/Utility/HookManager.lua"))();
-local HookAssigner = loadstring(game:HttpGet("https://zekehub.com/scripts/Utility/HookAssigner.lua"))();
 
 local Players, Workspace, ReplicatedStorage = Services:Get('Players', 'Workspace', 'ReplicatedStorage');
 local LocalPlayer = Players.LocalPlayer;
@@ -82,8 +80,6 @@ local GameModules = {};
 ]]
 
 do -- bad business [1168263273]
-    local moduleHookManager = HookManager;
-    local moduleHooks = HookAssigner:Start(moduleHookManager);
     local TS = nil;
     
     pcall(function()
@@ -208,61 +204,59 @@ do -- bad business [1168263273]
             end,
             
             setupHooks = function(Client, Shared, hookManager, hooks)
-                if TS.Projectiles and TS.Projectiles.InitProjectile then
-                    moduleHookManager:hook("BB_InitProjectile", TS.Projectiles.InitProjectile, LPH_NO_VIRTUALIZE(function(self, projectileType, position, direction, owner, ...)
-                        if typeof(position) ~= "Vector3" or typeof(direction) ~= "Vector3" then
-                            return moduleHooks("BB_InitProjectile", self, projectileType, position, direction, owner, ...);
-                        end;
-                        
-                        local newDirection = direction;
-                        
-                        if owner == LocalPlayer then
-                            if Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
-                                local chance = math.random(0, 100);
-                                if chance <= (Options.silentAimHitChance and Options.silentAimHitChance.Value or 100) then
-                                    GameModules[1168263273].getClosestPlayer(Client, Shared);
+                hookManager:hook("BB_InitProjectile", TS.Projectiles.InitProjectile, LPH_NO_VIRTUALIZE(function(self, projectileType, position, direction, owner, ...)
+                    if typeof(position) ~= "Vector3" or typeof(direction) ~= "Vector3" then
+                        return hooks("BB_InitProjectile", self, projectileType, position, direction, owner, ...);
+                    end;
+                    
+                    local newDirection = direction;
+                    
+                    if owner == LocalPlayer then
+                        if Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
+                            local chance = math.random(0, 100);
+                            if chance <= (Options.silentAimHitChance and Options.silentAimHitChance.Value or 100) then
+                                GameModules[1168263273].getClosestPlayer(Client, Shared);
+                                
+                                if Client.silentTarget.part then
+                                    local targetPos = Client.silentTarget.part.Position;
                                     
-                                    if Client.silentTarget.part then
-                                        local targetPos = Client.silentTarget.part.Position;
-                                        
-                                        if Shared.prediction then
-                                            local bulletSpeed = GetBulletSpeed();
-                                            local velocity = Client.silentTarget.part.AssemblyLinearVelocity or Vector3.zero;
-                                            local dist = (targetPos - position).Magnitude;
-                                            local timeToTarget = dist / bulletSpeed;
-                                            targetPos = targetPos + (velocity * timeToTarget);
-                                        end;
-                                        
-                                        newDirection = (targetPos - position).Unit;
+                                    if Shared.prediction then
+                                        local bulletSpeed = GetBulletSpeed();
+                                        local velocity = Client.silentTarget.part.AssemblyLinearVelocity or Vector3.zero;
+                                        local dist = (targetPos - position).Magnitude;
+                                        local timeToTarget = dist / bulletSpeed;
+                                        targetPos = targetPos + (velocity * timeToTarget);
                                     end;
+                                    
+                                    newDirection = (targetPos - position).Unit;
                                 end;
                             end;
                         end;
-                        
-                        return moduleHooks("BB_InitProjectile", self, projectileType, position, newDirection, owner, ...);
-                    end));
-                end;
+                    end;
+                    
+                    return hooks("BB_InitProjectile", self, projectileType, position, newDirection, owner, ...);
+                end));
                 
                 if TS.Camera and TS.Camera.Recoil and TS.Camera.Recoil.Fire then
-                    moduleHookManager:hook("BB_RecoilFire", TS.Camera.Recoil.Fire, LPH_NO_VIRTUALIZE(function(self, ...)
+                    hookManager:hook("BB_RecoilFire", TS.Camera.Recoil.Fire, LPH_NO_VIRTUALIZE(function(self, ...)
                         if Toggles.noRecoil and Toggles.noRecoil.Value then return; end;
-                        return moduleHooks("BB_RecoilFire", self, ...);
+                        return hooks("BB_RecoilFire", self, ...);
                     end));
                 end;
                 
                 if TS.Input and TS.Input.Reticle and TS.Input.Reticle.Choke then
-                    moduleHookManager:hook("BB_Choke", TS.Input.Reticle.Choke, LPH_NO_VIRTUALIZE(function(self, ...)
+                    hookManager:hook("BB_Choke", TS.Input.Reticle.Choke, LPH_NO_VIRTUALIZE(function(self, ...)
                         if Toggles.noSpread and Toggles.noSpread.Value then return Vector3.zero; end;
-                        return moduleHooks("BB_Choke", self, ...);
+                        return hooks("BB_Choke", self, ...);
                     end));
                 end;
                 
                 if TS.Input and TS.Input.Reticle and TS.Input.Reticle.LookVector then
-                    moduleHookManager:hook("BB_LookVector", TS.Input.Reticle.LookVector, LPH_NO_VIRTUALIZE(function(self, choke, ...)
+                    hookManager:hook("BB_LookVector", TS.Input.Reticle.LookVector, LPH_NO_VIRTUALIZE(function(self, choke, ...)
                         if Toggles.noSpread and Toggles.noSpread.Value then
                             choke = 0;
                         end;
-                        return moduleHooks("BB_LookVector", self, choke, ...);
+                        return hooks("BB_LookVector", self, choke, ...);
                     end));
                 end;
             end,
@@ -274,7 +268,6 @@ do -- bad business [1168263273]
             end,
             
             Unload = function()
-                moduleHookManager:dispose();
             end,
         };
     end;
