@@ -39,9 +39,6 @@ do -- bad business [1168263273]
             return 2000;
         end;
         
-        local moduleHookManager = nil;
-        local moduleHooks = nil;
-        
         GameModules[1168263273] = {
             Name = "Bad Business",
             
@@ -138,9 +135,6 @@ do -- bad business [1168263273]
             end,
             
             setupHooks = function(Client, Shared, hookManager, hooks)
-                moduleHookManager = hookManager;
-                moduleHooks = hooks;
-                
                 local thisModule = GameModules[1168263273];
                 
                 hookManager:hook("BB_InitProjectile", TS.Projectiles.InitProjectile, LPH_NO_VIRTUALIZE(function(self, projectileType, position, direction, owner, ...)
@@ -207,9 +201,6 @@ do -- bad business [1168263273]
             end,
             
             Unload = function()
-                if moduleHookManager then
-                    moduleHookManager:dispose();
-                end;
             end,
         };
     end;
