@@ -1,6 +1,8 @@
 if not LPH_OBFUSCATED then
-    loadstring(game:HttpGet("https://zekehub.com/scripts/Utility/luraphsdk.lua"))()
-end
+    LPH_NO_VIRTUALIZE = function(f) return f end;
+    LPH_JIT = function(f) return f end;
+    LPH_CRASH = function() while true do end end;
+end;
 
 local Services = loadstring(game:HttpGet("https://zekehub.com/scripts/Utility/Services.lua"))();
 
@@ -12,6 +14,8 @@ local GameModules = {};
 
 do -- bad business [1168263273]
     local TS = nil;
+    local storedClient = nil;
+    local storedShared = nil;
     
     pcall(function()
         local TSModule = require(ReplicatedStorage:WaitForChild("TS", 5));
@@ -28,7 +32,7 @@ do -- bad business [1168263273]
         local function GetBulletSpeed()
             if TS and TS.Items then
                 for item, controller in next, TS.Items:GetControllers() do
-                    if controller.Equipped then
+                    if controller.Equipped and controller.Owner == LocalPlayer then
                         local config = TS.Items:GetConfig(item);
                         if config and config.Projectile and config.Projectile.Speed then
                             return config.Projectile.Speed;
@@ -39,19 +43,26 @@ do -- bad business [1168263273]
             return 2000;
         end;
         
+        local function GetCharacterBody(player)
+            if TS and TS.Characters then
+                local char = TS.Characters:GetCharacter(player);
+                if char and char.Body and char.Body.Parent then
+                    return char.Body;
+                end;
+            end;
+            return player.Character;
+        end;
+        
         GameModules[1168263273] = {
             Name = "Bad Business",
             
             getCharacter = function(player)
-                if TS and TS.Characters then
-                    local char = TS.Characters:GetCharacter(player);
-                    if char and char.Body then return char.Body; end;
-                end;
-                return player.Character;
+                return GetCharacterBody(player);
             end,
             
             getHealth = function(character)
-                local humanoid = character and character:FindFirstChildOfClass("Humanoid");
+                if not character then return 0, 100; end;
+                local humanoid = character:FindFirstChildOfClass("Humanoid");
                 if humanoid then return humanoid.Health, humanoid.MaxHealth; end;
                 return 100, 100;
             end,
@@ -68,33 +79,47 @@ do -- bad business [1168263273]
             getWeapon = function(player)
                 if TS and TS.Items then
                     for item, controller in next, TS.Items:GetControllers() do
-                        if controller.Equipped and controller.Owner == player then
-                            return item.Name or "Unknown";
+                        if controller.Equipped then
+                            local character = GetCharacterBody(player);
+                            if character then
+                                local tool = character:FindFirstChildOfClass("Tool");
+                                if tool and tool == item then
+                                    return item.Name or "Unknown";
+                                end;
+                            end;
+                            if controller.Owner == player then
+                                return item.Name or "Unknown";
+                            end;
                         end;
                     end;
+                end;
+                local character = GetCharacterBody(player);
+                if character then
+                    local tool = character:FindFirstChildOfClass("Tool");
+                    if tool then return tool.Name; end;
                 end;
                 return "Unarmed";
             end,
             
             getClosestPlayer = function(Client, Shared)
+                local client = Client or storedClient;
+                local shared = Shared or storedShared;
+                if not client or not shared then return nil; end;
+                
+                CurrentCamera = Workspace.CurrentCamera;
                 local center = CurrentCamera.ViewportSize / 2;
-                local closestPlayer, closestDistance, closestPart = nil, Shared.fovRadius, nil;
+                local closestPlayer, closestDistance, closestPart = nil, shared.fovRadius or 150, nil;
                 
                 for _, player in next, Players:GetPlayers() do
                     if player == LocalPlayer then continue; end;
                     
-                    local character = nil;
-                    if TS and TS.Characters then
-                        local char = TS.Characters:GetCharacter(player);
-                        if char and char.Body then character = char.Body; end;
-                    end;
-                    if not character then character = player.Character; end;
+                    local character = GetCharacterBody(player);
                     if not character then continue; end;
                     
                     local humanoid = character:FindFirstChildOfClass("Humanoid");
                     if not humanoid or humanoid.Health <= 0 then continue; end;
                     
-                    if Shared.teamCheck then
+                    if shared.teamCheck then
                         if TS and TS.Teams then
                             local localTeam = TS.Teams:GetPlayerTeam(LocalPlayer);
                             local playerTeam = TS.Teams:GetPlayerTeam(player);
@@ -102,18 +127,18 @@ do -- bad business [1168263273]
                         end;
                     end;
                     
-                    local targetPart = character:FindFirstChild(Shared.hitbox) or character:FindFirstChild("Head");
+                    local targetPart = character:FindFirstChild(shared.hitbox or "Head") or character:FindFirstChild("Head");
                     if not targetPart then continue; end;
                     
                     local worldDistance = (CurrentCamera.CFrame.Position - targetPart.Position).Magnitude;
-                    if worldDistance > Shared.maxDistance then continue; end;
+                    if worldDistance > (shared.maxDistance or 500) then continue; end;
                     
                     local screenPos, onScreen = CurrentCamera:WorldToViewportPoint(targetPart.Position);
                     if not onScreen then continue; end;
                     
                     local distance = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude;
                     
-                    if Shared.visibleCheck then
+                    if shared.visibleCheck then
                         local params = RaycastParams.new();
                         params.FilterType = Enum.RaycastFilterType.Exclude;
                         params.FilterDescendantsInstances = {CurrentCamera, LocalPlayer.Character, character};
@@ -121,85 +146,84 @@ do -- bad business [1168263273]
                         if result then continue; end;
                     end;
                     
-                    if distance < closestDistance then 
-                        closestDistance = distance; 
-                        closestPlayer = player; 
-                        closestPart = targetPart; 
+                    if distance < closestDistance then
+                        closestDistance = distance;
+                        closestPlayer = player;
+                        closestPart = targetPart;
                     end;
                 end;
                 
-                Client.silentTarget.player = closestPlayer;
-                Client.silentTarget.part = closestPart;
-                Client.silentTarget.distance = closestDistance;
+                client.silentTarget.player = closestPlayer;
+                client.silentTarget.part = closestPart;
+                client.silentTarget.distance = closestDistance;
                 return closestPlayer;
             end,
             
             setupHooks = function(Client, Shared, hookManager, hooks)
-                    print("GOT HERE 1");
-                    print("hookManager:", hookManager);
-                    print("hooks:", hooks);
-                    print("TS:", TS);
-                    print("TS.Projectiles:", TS and TS.Projectiles);
+                storedClient = Client;
+                storedShared = Shared;
+                
                 local thisModule = GameModules[1168263273];
                 
-                hookManager:hook("BB_InitProjectile", TS.Projectiles.InitProjectile, LPH_NO_VIRTUALIZE(function(self, projectileType, position, direction, owner, ...)
-                    if typeof(position) ~= "Vector3" or typeof(direction) ~= "Vector3" then
-                        return hooks.BB_InitProjectile(self, projectileType, position, direction, owner, ...);
-                    end;
+                local oldInitProjectile;
+                oldInitProjectile = hookfunction(TS.Projectiles.InitProjectile, LPH_NO_VIRTUALIZE(function(self, ...)
+                    local args = {...};
                     
-                    local newDirection = direction;
-                    
-                    if owner == LocalPlayer then
+                    if #args >= 4 and args[4] == LocalPlayer then
                         if Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
                             local chance = math.random(0, 100);
                             if chance <= (Options.silentAimHitChance and Options.silentAimHitChance.Value or 100) then
                                 thisModule.getClosestPlayer(Client, Shared);
                                 
                                 if Client.silentTarget.part then
-                                    local targetPos = Client.silentTarget.part.Position;
-                                    
-                                    if Shared.prediction then
-                                        local bulletSpeed = GetBulletSpeed();
-                                        local velocity = Client.silentTarget.part.AssemblyLinearVelocity or Vector3.zero;
-                                        local dist = (targetPos - position).Magnitude;
-                                        local timeToTarget = dist / bulletSpeed;
-                                        targetPos = targetPos + (velocity * timeToTarget);
-                                    end;
-                                    
-                                    newDirection = (targetPos - position).Unit;
+                                    local origin = args[2];
+                                    local bulletSpeed = GetBulletSpeed();
+                                    local velocity = Client.silentTarget.part.AssemblyLinearVelocity or Vector3.zero;
+                                    local distance = (Client.silentTarget.part.Position - origin).Magnitude;
+                                    local timeToTarget = distance / bulletSpeed;
+                                    local predictedPos = Client.silentTarget.part.Position + (velocity * timeToTarget);
+                                    args[3] = (predictedPos - origin).Unit;
                                 end;
                             end;
                         end;
                     end;
                     
-                    return hooks.BB_InitProjectile(self, projectileType, position, newDirection, owner, ...);
+                    return oldInitProjectile(self, unpack(args));
                 end));
                 
+                local oldRecoilFire;
                 if TS.Camera and TS.Camera.Recoil and TS.Camera.Recoil.Fire then
-                    hookManager:hook("BB_RecoilFire", TS.Camera.Recoil.Fire, LPH_NO_VIRTUALIZE(function(self, ...)
+                    oldRecoilFire = hookfunction(TS.Camera.Recoil.Fire, LPH_NO_VIRTUALIZE(function(self, ...)
                         if Toggles.noRecoil and Toggles.noRecoil.Value then return; end;
-                        return hooks.BB_RecoilFire(self, ...);
+                        return oldRecoilFire(self, ...);
                     end));
                 end;
                 
+                local oldChoke;
                 if TS.Input and TS.Input.Reticle and TS.Input.Reticle.Choke then
-                    hookManager:hook("BB_Choke", TS.Input.Reticle.Choke, LPH_NO_VIRTUALIZE(function(self, ...)
+                    oldChoke = hookfunction(TS.Input.Reticle.Choke, LPH_NO_VIRTUALIZE(function(self, ...)
                         if Toggles.noSpread and Toggles.noSpread.Value then return Vector3.zero; end;
-                        return hooks.BB_Choke(self, ...);
+                        return oldChoke(self, ...);
                     end));
                 end;
                 
+                local oldLookVector;
                 if TS.Input and TS.Input.Reticle and TS.Input.Reticle.LookVector then
-                    hookManager:hook("BB_LookVector", TS.Input.Reticle.LookVector, LPH_NO_VIRTUALIZE(function(self, choke, ...)
+                    oldLookVector = hookfunction(TS.Input.Reticle.LookVector, LPH_NO_VIRTUALIZE(function(self, choke, ...)
                         if Toggles.noSpread and Toggles.noSpread.Value then
                             choke = 0;
                         end;
-                        return hooks.BB_LookVector(self, choke, ...);
+                        return oldLookVector(self, choke, ...);
                     end));
                 end;
             end,
             
             buildUI = function(Tabs, Client, Shared)
+                if Options.silentAimMethod then
+                    Options.silentAimMethod:SetValue("Raycast");
+                    Options.silentAimMethod:Destroy();
+                end;
+                
                 local gunModsGroup = Tabs.Main:AddLeftGroupbox("Gun Mods");
                 gunModsGroup:AddToggle("noRecoil", {Text = "No Recoil"});
                 gunModsGroup:AddToggle("noSpread", {Text = "No Spread"});
