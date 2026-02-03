@@ -62,20 +62,6 @@ do
             return nil;
         end;
         
-        local function GetHealthFromBody(body)
-            if not body then return 0, 100; end;
-            local charModel = body.Parent;
-            if not charModel then return 0, 100; end;
-            local health = charModel:FindFirstChild("Health");
-            if health then
-                local currentHealth = health.Value or 0;
-                local maxHealthObj = health:FindFirstChild("MaxHealth");
-                local maxHealthValue = maxHealthObj and maxHealthObj.Value or 100;
-                return currentHealth, maxHealthValue;
-            end;
-            return 100, 100;
-        end;
-        
         local function GetHealthFromModel(charModel)
             if not charModel then return 0, 100; end;
             local health = charModel:FindFirstChild("Health");
@@ -88,26 +74,35 @@ do
             return 100, 100;
         end;
         
-        local function IsAlive(player)
-            local body = GetCharacterBody(player);
-            if not body then return false; end;
-            local health, _ = GetHealthFromBody(body);
-            return health > 0;
-        end;
-        
         GameModules[1168263273] = {
             Name = "Bad Business",
             
+            -- Returns Body folder - contains Head, Chest, Hips, Arms, Legs
+            -- ESP will iterate these parts for bounding box
             getCharacter = function(player)
                 return GetCharacterBody(player);
             end,
             
-            getHealth = function(bodyOrCharacter)
-                if not bodyOrCharacter then return 0, 100; end;
-                if bodyOrCharacter:FindFirstChild("Health") then
-                    return GetHealthFromModel(bodyOrCharacter);
+            -- Health is stored on parent model (not Body folder)
+            getHealth = function(character)
+                if not character then return 0, 100; end;
+                
+                -- character is the Body folder, health is on parent
+                if character.Name == "Body" and character.Parent then
+                    return GetHealthFromModel(character.Parent);
                 end;
-                return GetHealthFromBody(bodyOrCharacter);
+                
+                -- Fallback: maybe we got full model
+                if character:FindFirstChild("Health") then
+                    return GetHealthFromModel(character);
+                end;
+                
+                -- Try parent
+                if character.Parent and character.Parent:FindFirstChild("Health") then
+                    return GetHealthFromModel(character.Parent);
+                end;
+                
+                return 100, 100;
             end,
             
             isFriendly = function(player)
@@ -156,7 +151,8 @@ do
                     local body = GetCharacterBody(player);
                     if not body then continue; end;
                     
-                    local health, _ = GetHealthFromBody(body);
+                    local charModel = body.Parent;
+                    local health, _ = GetHealthFromModel(charModel);
                     if health <= 0 then continue; end;
                     
                     if shared.teamCheck and TS and TS.Teams then
@@ -180,10 +176,10 @@ do
                     local distance = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude;
                     
                     if shared.visibleCheck then
-                        local charModel = body.Parent;
+                        local myChar = GetCharacterModel(LocalPlayer);
                         local params = RaycastParams.new();
                         params.FilterType = Enum.RaycastFilterType.Exclude;
-                        params.FilterDescendantsInstances = {CurrentCamera, LocalPlayer.Character, charModel, GetCharacterModel(LocalPlayer)};
+                        params.FilterDescendantsInstances = {CurrentCamera, LocalPlayer.Character, charModel, myChar};
                         local result = Workspace:Raycast(CurrentCamera.CFrame.Position, (targetPart.Position - CurrentCamera.CFrame.Position).Unit * worldDistance, params);
                         if result then continue; end;
                     end;
@@ -211,8 +207,6 @@ do
                     local args = {...};
                     
                     if #args >= 4 and args[4] == LocalPlayer then
-                        print(Toggles)
-                        print(Toggles and Toggles.silentAimEnabled)
                         if Toggles and Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
                             local hitChance = 100;
                             if Options and Options.silentAimHitChance then
