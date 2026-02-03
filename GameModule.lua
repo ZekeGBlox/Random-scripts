@@ -205,4 +205,4 @@ do -- bad business [1168263273]
     end;
 end;
 
-return GameModules[game.GameId];
+return GameModules;
