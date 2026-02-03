@@ -6,20 +6,82 @@ end;
 
 local Services = loadstring(game:HttpGet("https://zekehub.com/scripts/Utility/Services.lua"))();
 
-local Players, Workspace, ReplicatedStorage, RunService = Services:Get('Players', 'Workspace', 'ReplicatedStorage', 'RunService');
+local Players, Workspace, ReplicatedStorage = Services:Get('Players', 'Workspace', 'ReplicatedStorage');
 local LocalPlayer = Players.LocalPlayer;
 local CurrentCamera = Workspace.CurrentCamera;
 
 local GameModules = {};
 
+--[[
+    =====================================
+    HOW TO CREATE A CUSTOM MODULE
+    =====================================
+    
+    1. Create a new entry in GameModules using the game's GameId as the key
+    2. The module should contain:
+        - Name: string (display name)
+        - getCharacter(player): function that returns the player's character
+        - getHealth(character): function that returns health, maxHealth
+        - isFriendly(player): function that returns true if player is on same team
+        - getWeapon(player): function that returns equipped weapon name
+        - getClosestPlayer(Client, Shared): function that finds closest valid target
+        - setupHooks(Client, Shared, hookManager, hooks): function to setup game-specific hooks
+        - buildUI(Tabs, Client, Shared): function to add custom UI elements
+        - Unload(): function to cleanup when script unloads
+    
+    IMPORTANT:
+    - If setupHooks is defined, the default silent aim will NOT be used
+    - Your hooks should handle silent aim logic for that specific game
+    - Always use hookManager:hook() for hooks so they can be properly disposed
+    
+    EXAMPLE USAGE:
+    
+    GameModules[YOUR_GAME_ID] = {
+        Name = "Your Game Name",
+        
+        getCharacter = function(player)
+            return player.Character;
+        end,
+        
+        getHealth = function(character)
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid");
+            if humanoid then return humanoid.Health, humanoid.MaxHealth; end;
+            return 100, 100;
+        end,
+        
+        isFriendly = function(player)
+            return player.Team and player.Team == LocalPlayer.Team;
+        end,
+        
+        getWeapon = function(player)
+            local character = player.Character;
+            if character then
+                local tool = character:FindFirstChildOfClass("Tool");
+                if tool then return tool.Name; end;
+            end;
+            return "Unarmed";
+        end,
+        
+        setupHooks = function(Client, Shared, hookManager, hooks)
+            -- Your hook logic here
+        end,
+        
+        buildUI = function(Tabs, Client, Shared)
+            local customGroup = Tabs.Main:AddLeftGroupbox("Custom Features");
+            customGroup:AddToggle("customFeature", {Text = "Custom Feature"});
+        end,
+        
+        Unload = function()
+        end,
+    };
+]]
+
 do -- bad business [1168263273]
     local TS = nil;
     local storedClient = nil;
     local storedShared = nil;
-    local storedESP = nil;
-    local espObjects = {};
-    local chamObjects = {};
-    local characterTrackingConnection = nil;
+    local highlights = {};
+    local chamsConnection = nil;
     
     pcall(function()
         local TSModule = require(ReplicatedStorage:WaitForChild("TS", 5));
@@ -109,162 +171,50 @@ do -- bad business [1168263273]
             return "Unarmed";
         end;
         
-        local function CreateEspForCharacter(player, charModel, ESP)
-            if not charModel or not charModel.Parent then return; end;
-            if player == LocalPlayer then return; end;
-            
-            local body = charModel:FindFirstChild("Body");
-            if not body then return; end;
-            
-            if espObjects[player] then
-                espObjects[player]:Destruct();
-                espObjects[player] = nil;
-            end;
-            if chamObjects[player] then
-                chamObjects[player]:Destruct();
-                chamObjects[player] = nil;
-            end;
-            
-            local isFriendly = IsFriendly(player);
-            
-            local function getOptions()
-                local teamType = isFriendly and "friendly" or "enemy";
-                local baseOptions = ESP.teamSettings[teamType];
-                return {
-                    enabled = baseOptions.enabled,
-                    box = baseOptions.box,
-                    boxColor = baseOptions.boxColor,
-                    boxOutline = baseOptions.boxOutline,
-                    boxOutlineColor = baseOptions.boxOutlineColor,
-                    boxFill = baseOptions.boxFill,
-                    boxFillColor = baseOptions.boxFillColor,
-                    healthBar = baseOptions.healthBar,
-                    healthyColor = baseOptions.healthyColor,
-                    dyingColor = baseOptions.dyingColor,
-                    healthBarOutline = baseOptions.healthBarOutline,
-                    healthBarOutlineColor = baseOptions.healthBarOutlineColor,
-                    healthText = baseOptions.healthText,
-                    healthTextColor = baseOptions.healthTextColor,
-                    healthTextOutline = baseOptions.healthTextOutline,
-                    healthTextOutlineColor = baseOptions.healthTextOutlineColor,
-                    box3d = baseOptions.box3d,
-                    box3dColor = baseOptions.box3dColor,
-                    name = baseOptions.name,
-                    nameColor = baseOptions.nameColor,
-                    nameOutline = baseOptions.nameOutline,
-                    nameOutlineColor = baseOptions.nameOutlineColor,
-                    weapon = baseOptions.weapon,
-                    weaponColor = baseOptions.weaponColor,
-                    weaponOutline = baseOptions.weaponOutline,
-                    weaponOutlineColor = baseOptions.weaponOutlineColor,
-                    weaponText = GetWeaponForPlayer(player),
-                    distance = baseOptions.distance,
-                    distanceColor = baseOptions.distanceColor,
-                    distanceOutline = baseOptions.distanceOutline,
-                    distanceOutlineColor = baseOptions.distanceOutlineColor,
-                    tracer = baseOptions.tracer,
-                    tracerOrigin = baseOptions.tracerOrigin,
-                    tracerColor = baseOptions.tracerColor,
-                    tracerOutline = baseOptions.tracerOutline,
-                    tracerOutlineColor = baseOptions.tracerOutlineColor,
-                    offScreenArrow = baseOptions.offScreenArrow,
-                    offScreenArrowColor = baseOptions.offScreenArrowColor,
-                    offScreenArrowSize = baseOptions.offScreenArrowSize,
-                    offScreenArrowRadius = baseOptions.offScreenArrowRadius,
-                    offScreenArrowOutline = baseOptions.offScreenArrowOutline,
-                    offScreenArrowOutlineColor = baseOptions.offScreenArrowOutlineColor,
-                    chams = baseOptions.chams,
-                    chamsVisibleOnly = baseOptions.chamsVisibleOnly,
-                    chamsFillColor = baseOptions.chamsFillColor,
-                    chamsOutlineColor = baseOptions.chamsOutlineColor,
-                };
-            end;
-            
-            ESP.getHealth = function(character)
-                if not character then return 0, 100; end;
-                if character.Name == "Body" and character.Parent then
-                    return GetHealthFromModel(character.Parent);
-                end;
-                if character:FindFirstChild("Health") then
-                    return GetHealthFromModel(character);
-                end;
-                if character.Parent and character.Parent:FindFirstChild("Health") then
-                    return GetHealthFromModel(character.Parent);
-                end;
-                return 100, 100;
-            end;
-            
-            espObjects[player] = ESP.AddInstanceEsp(body, getOptions);
-            
-            if ESP.InstanceChamObject then
-                chamObjects[player] = ESP.InstanceChamObject.new(body, ESP, getOptions);
-            end;
-            
-            local healthValue = charModel:FindFirstChild("Health");
-            if healthValue then
-                local conn;
-                conn = healthValue.Changed:Connect(function(newHealth)
-                    if newHealth <= 0 then
-                        if espObjects[player] then
-                            espObjects[player]:Destruct();
-                            espObjects[player] = nil;
-                        end;
-                        if chamObjects[player] then
-                            chamObjects[player]:Destruct();
-                            chamObjects[player] = nil;
-                        end;
-                        conn:Disconnect();
-                    end;
-                end);
-            end;
-        end;
-        
-        local function SetupCharacterTracking(ESP)
-            storedESP = ESP;
-            
-            if TS and TS.Characters then
-                local charactersFolder = nil;
-                pcall(function()
-                    for _, folder in next, Workspace:GetChildren() do
-                        if folder.Name == "Characters" or folder.Name == "characters" then
-                            charactersFolder = folder;
-                            break;
-                        end;
-                    end;
-                end);
+        local function UpdateChams()
+            for _, player in next, Players:GetPlayers() do
+                if player == LocalPlayer then continue; end;
                 
-                for _, player in next, Players:GetPlayers() do
-                    if player ~= LocalPlayer then
-                        local charModel = GetCharacterModel(player);
-                        if charModel then
-                            CreateEspForCharacter(player, charModel, ESP);
-                        end;
+                local charModel = GetCharacterModel(player);
+                local body = charModel and charModel:FindFirstChild("Body");
+                local health, _ = GetHealthFromModel(charModel);
+                
+                local chamsEnabled = Toggles and Toggles.bbChamsEnabled and Toggles.bbChamsEnabled.Value;
+                local teamCheck = storedShared and storedShared.teamCheck;
+                local isFriendly = IsFriendly(player);
+                
+                local shouldShow = chamsEnabled and body and body.Parent and health > 0 and (not teamCheck or not isFriendly);
+                
+                if shouldShow then
+                    if not highlights[player] then
+                        local hl = Instance.new("Highlight");
+                        hl.Adornee = body;
+                        hl.Parent = game:GetService("CoreGui");
+                        highlights[player] = hl;
+                    end;
+                    
+                    local hl = highlights[player];
+                    if hl and hl.Parent then
+                        hl.Adornee = body;
+                        hl.FillColor = Options and Options.bbChamsFillColor and Options.bbChamsFillColor.Value or Color3.new(0.2, 0.2, 0.2);
+                        hl.FillTransparency = Options and Options.bbChamsFillTransparency and Options.bbChamsFillTransparency.Value or 0.5;
+                        hl.OutlineColor = Options and Options.bbChamsOutlineColor and Options.bbChamsOutlineColor.Value or Color3.new(1, 0, 0);
+                        hl.OutlineTransparency = 0;
+                        hl.DepthMode = (Toggles and Toggles.bbChamsVisibleOnly and Toggles.bbChamsVisibleOnly.Value) and Enum.HighlightDepthMode.Occluded or Enum.HighlightDepthMode.AlwaysOnTop;
+                    end;
+                else
+                    if highlights[player] then
+                        highlights[player]:Destroy();
+                        highlights[player] = nil;
                     end;
                 end;
-                
-                characterTrackingConnection = RunService.Heartbeat:Connect(function()
-                    for _, player in next, Players:GetPlayers() do
-                        if player ~= LocalPlayer then
-                            local charModel = GetCharacterModel(player);
-                            local body = charModel and charModel:FindFirstChild("Body");
-                            
-                            if body and body.Parent then
-                                if not espObjects[player] or not espObjects[player].instance or not espObjects[player].instance.Parent then
-                                    CreateEspForCharacter(player, charModel, ESP);
-                                end;
-                            else
-                                if espObjects[player] then
-                                    espObjects[player]:Destruct();
-                                    espObjects[player] = nil;
-                                end;
-                                if chamObjects[player] then
-                                    chamObjects[player]:Destruct();
-                                    chamObjects[player] = nil;
-                                end;
-                            end;
-                        end;
-                    end;
-                end);
+            end;
+            
+            for player, hl in next, highlights do
+                if not player or not player.Parent then
+                    if hl then hl:Destroy(); end;
+                    highlights[player] = nil;
+                end;
             end;
         end;
         
@@ -433,10 +383,8 @@ do -- bad business [1168263273]
                         return hooks.BB_Choke(self, ...);
                     end));
                 end;
-            end,
-            
-            setupEsp = function(ESP)
-                SetupCharacterTracking(ESP);
+                
+                chamsConnection = RunService.Heartbeat:Connect(UpdateChams);
             end,
             
             buildUI = function(Tabs, Client, Shared)
@@ -448,34 +396,83 @@ do -- bad business [1168263273]
                 local bulletSpeedSettings = gunModsGroup:AddDependencyBox();
                 bulletSpeedSettings:AddSlider("bulletSpeedMultiplier", {Text = "Multiplier", Min = 1, Max = 20, Default = 10, Rounding = 0});
                 bulletSpeedSettings:SetupDependencies({{Toggles.bulletSpeed, true}});
+                
+                local chamsGroup = Tabs.Visuals:AddLeftGroupbox("Chams");
+                chamsGroup:AddToggle("bbChamsEnabled", {Text = "Enabled"});
+                local chamsSettings = chamsGroup:AddDependencyBox();
+                chamsSettings:AddLabel("Fill Color"):AddColorPicker("bbChamsFillColor", {Default = Color3.new(0.2, 0.2, 0.2)});
+                chamsSettings:AddSlider("bbChamsFillTransparency", {Text = "Fill Transparency", Min = 0, Max = 1, Default = 0.5, Rounding = 2});
+                chamsSettings:AddLabel("Outline Color"):AddColorPicker("bbChamsOutlineColor", {Default = Color3.new(1, 0, 0)});
+                chamsSettings:AddToggle("bbChamsVisibleOnly", {Text = "Visible Only"});
+                chamsSettings:SetupDependencies({{Toggles.bbChamsEnabled, true}});
             end,
             
             Unload = function()
-                if characterTrackingConnection then
-                    characterTrackingConnection:Disconnect();
-                    characterTrackingConnection = nil;
+                if chamsConnection then
+                    chamsConnection:Disconnect();
+                    chamsConnection = nil;
                 end;
                 
-                for player, obj in next, espObjects do
-                    if obj and obj.Destruct then
-                        obj:Destruct();
-                    end;
+                for player, hl in next, highlights do
+                    if hl then hl:Destroy(); end;
                 end;
-                table.clear(espObjects);
-                
-                for player, obj in next, chamObjects do
-                    if obj and obj.Destruct then
-                        obj:Destruct();
-                    end;
-                end;
-                table.clear(chamObjects);
+                table.clear(highlights);
                 
                 storedClient = nil;
                 storedShared = nil;
-                storedESP = nil;
             end,
         };
     end;
 end;
+
+--[[
+    =====================================
+    MODULE TEMPLATE
+    =====================================
+    
+    do -- your game [GAME_ID]
+        GameModules[YOUR_GAME_ID] = {
+            Name = "Your Game Name",
+            
+            getCharacter = function(player)
+                return player.Character;
+            end,
+            
+            getHealth = function(character)
+                local humanoid = character and character:FindFirstChildOfClass("Humanoid");
+                if humanoid then return humanoid.Health, humanoid.MaxHealth; end;
+                return 100, 100;
+            end,
+            
+            isFriendly = function(player)
+                return player.Team and player.Team == LocalPlayer.Team;
+            end,
+            
+            getWeapon = function(player)
+                local character = player.Character;
+                if character then
+                    local tool = character:FindFirstChildOfClass("Tool");
+                    if tool then return tool.Name; end;
+                end;
+                return "Unarmed";
+            end,
+            
+            getClosestPlayer = function(Client, Shared)
+                -- Custom target finding
+            end,
+            
+            setupHooks = function(Client, Shared, hookManager, hooks)
+                -- Custom hooks
+            end,
+            
+            buildUI = function(Tabs, Client, Shared)
+                -- Custom UI
+            end,
+            
+            Unload = function()
+            end,
+        };
+    end;
+]]
 
 return GameModules;
