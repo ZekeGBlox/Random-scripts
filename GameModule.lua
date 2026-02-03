@@ -1,3 +1,4 @@
+-- Kalas i will split these into multiple files later on LOL once i make the bundler for it
 if not LPH_OBFUSCATED then
     LPH_NO_VIRTUALIZE = function(f) return f end;
     LPH_JIT = function(f) return f end;
@@ -369,6 +370,248 @@ do -- bad business [1168263273]
             end,
         };
     end;
+end;
+
+do -- base battles [1865489894]
+    local Libraries = ReplicatedStorage:WaitForChild("Libraries", 5);
+    local Weapon = require(Libraries:WaitForChild("Weapon"));
+    local Global = require(Libraries:WaitForChild("Global"));
+    local Gameplay = require(Libraries:WaitForChild("Gameplay"));
+    
+    local function GetPlayerTeam(player)
+        return Global.Teams and Global.Teams[player];
+    end;
+    
+    local function PredictPosition(targetPart, origin)
+        local velocity = targetPart.AssemblyLinearVelocity or Vector3.zero;
+        local distance = (targetPart.Position - origin).Magnitude;
+        local equippedWeapon = Weapon.GetEquippedWeapon(LocalPlayer);
+        local projectileSpeed = equippedWeapon and equippedWeapon.config and equippedWeapon.config.projectileVelocity or 1000;
+        local timeToHit = distance / projectileSpeed;
+        return targetPart.Position + (velocity * timeToHit);
+    end;
+    
+    GameModules[1865489894] = {
+        Name = "Base Battles",
+        
+        getCharacter = function(player)
+            return player.Character;
+        end,
+        
+        getHealth = function(character)
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid");
+            if humanoid then return humanoid.Health, humanoid.MaxHealth; end;
+            return 100, 100;
+        end,
+        
+        isFriendly = function(player)
+            return GetPlayerTeam(player) == GetPlayerTeam(LocalPlayer);
+        end,
+        
+        getWeapon = function(player)
+            local equipped = Weapon.GetEquippedWeapon(player);
+            if equipped and equipped.config then return equipped.config.Name or "Unknown"; end;
+            return "Unarmed";
+        end,
+        
+        getClosestPlayer = function(Client, Shared)
+            local mousePos = game:GetService("UserInputService"):GetMouseLocation();
+            local closestPlayer, closestDistance, closestPart = nil, Shared.fovRadius, nil;
+            
+            for _, player in next, Players:GetPlayers() do
+                if player == LocalPlayer then continue; end;
+                local character = player.Character;
+                if not character then continue; end;
+                
+                local humanoid = character:FindFirstChildOfClass("Humanoid");
+                if not humanoid or humanoid.Health <= 0 then continue; end;
+                if Shared.teamCheck and GetPlayerTeam(player) == GetPlayerTeam(LocalPlayer) then continue; end;
+                
+                local targetPart = character:FindFirstChild(Shared.hitbox) or character:FindFirstChild("Head");
+                if not targetPart then continue; end;
+                
+                local worldDistance = (CurrentCamera.CFrame.Position - targetPart.Position).Magnitude;
+                if worldDistance > Shared.maxDistance then continue; end;
+                
+                local screenPos, onScreen = CurrentCamera:WorldToViewportPoint(targetPart.Position);
+                if not onScreen then continue; end;
+                
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude;
+                if distance > Shared.fovRadius then continue; end;
+                
+                if distance < closestDistance then
+                    closestDistance = distance;
+                    closestPlayer = player;
+                    closestPart = targetPart;
+                end;
+            end;
+            
+            Client.silentTarget.player = closestPlayer;
+            Client.silentTarget.part = closestPart;
+            Client.silentTarget.distance = closestDistance;
+            return closestPlayer;
+        end,
+        
+        setupHooks = function(Client, Shared, hookManager, hooks)
+            local thisModule = GameModules[1865489894];
+            
+            hookManager:hook("BaseBattles_CastMouseRay", Gameplay.CastMouseRay, LPH_NO_VIRTUALIZE(function(distance, ignoreList, ignoreFunc, bloom)
+                local result = hooks.BaseBattles_CastMouseRay(distance, ignoreList, ignoreFunc, bloom);
+                
+                if Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
+                    if math.random(0, 100) <= (Options.silentAimHitChance and Options.silentAimHitChance.Value or 100) then
+                        thisModule.getClosestPlayer(Client, Shared);
+                        if Client.silentTarget.part then
+                            local origin = Workspace.CurrentCamera.CFrame.Position;
+                            return { Position = PredictPosition(Client.silentTarget.part, origin) };
+                        end;
+                    end;
+                end;
+                
+                return result;
+            end));
+            
+            hookManager:hook("BaseBattles_GetDir", Gameplay.GetDir, LPH_NO_VIRTUALIZE(function(player, bloom, originCFrame, ignoreList)
+                local origin, direction = hooks.BaseBattles_GetDir(player, bloom, originCFrame, ignoreList);
+                
+                if player == LocalPlayer and Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
+                    if math.random(0, 100) <= (Options.silentAimHitChance and Options.silentAimHitChance.Value or 100) then
+                        thisModule.getClosestPlayer(Client, Shared);
+                        if Client.silentTarget.part then
+                            direction = (PredictPosition(Client.silentTarget.part, origin) - origin).Unit;
+                        end;
+                    end;
+                end;
+                
+                return origin, direction;
+            end));
+        end,
+        
+        buildUI = function(Tabs, Client, Shared)
+        end,
+        
+        Unload = function()
+        end,
+    };
+end;
+
+do -- flick [8795154789]
+    local BulletHandler = require(ReplicatedStorage.ModuleScripts.GunModules.BulletHandler);
+    
+    GameModules[8795154789] = {
+        Name = "Flick",
+        
+        getCharacter = function(player)
+            return player.Character;
+        end,
+        
+        getHealth = function(character)
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid");
+            if humanoid then return humanoid.Health, humanoid.MaxHealth; end;
+            return 100, 100;
+        end,
+        
+        isFriendly = function(player)
+            return player.Team and player.Team == LocalPlayer.Team;
+        end,
+        
+        getWeapon = function(player)
+            local character = player.Character;
+            if character then
+                local tool = character:FindFirstChildOfClass("Tool");
+                if tool then return tool.Name; end;
+            end;
+            return "Unarmed";
+        end,
+        
+        getClosestPlayer = function(Client, Shared)
+            local mousePos = game:GetService("UserInputService"):GetMouseLocation();
+            local closestPlayer, closestDistance, closestPart = nil, Shared.fovRadius, nil;
+            
+            for _, player in next, Players:GetPlayers() do
+                if player == LocalPlayer then continue; end;
+                local character = player.Character;
+                if not character then continue; end;
+                
+                local humanoid = character:FindFirstChildOfClass("Humanoid");
+                if not humanoid or humanoid.Health <= 0 then continue; end;
+                if Shared.teamCheck and player.Team and player.Team == LocalPlayer.Team then continue; end;
+                
+                local targetPart = character:FindFirstChild(Shared.hitbox) or character:FindFirstChild("Head");
+                if not targetPart then continue; end;
+                
+                local worldDistance = (CurrentCamera.CFrame.Position - targetPart.Position).Magnitude;
+                if worldDistance > Shared.maxDistance then continue; end;
+                
+                local screenPos, onScreen = CurrentCamera:WorldToViewportPoint(targetPart.Position);
+                if not onScreen then continue; end;
+                
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude;
+                if distance > Shared.fovRadius then continue; end;
+                
+                if distance < closestDistance then
+                    closestDistance = distance;
+                    closestPlayer = player;
+                    closestPart = targetPart;
+                end;
+            end;
+            
+            Client.silentTarget.player = closestPlayer;
+            Client.silentTarget.part = closestPart;
+            Client.silentTarget.distance = closestDistance;
+            return closestPlayer;
+        end,
+        
+        setupHooks = function(Client, Shared, hookManager, hooks)
+            local thisModule = GameModules[8795154789];
+            
+            hookManager:hook("Flick_BulletFire", BulletHandler.Fire, LPH_NO_VIRTUALIZE(function(data)
+                local info = debug.getinfo(2, "f");
+                if info and info.func then
+                    local upvalues = debug.getupvalues(info.func);
+                    if upvalues and #upvalues >= 3 then
+                        local gunConfig = upvalues[3];
+                        if gunConfig and type(gunConfig) == "table" then
+                            if Toggles.noSpread and Toggles.noSpread.Value then
+                                gunConfig.spread = 0;
+                            end;
+                            if Toggles.noRecoil and Toggles.noRecoil.Value then
+                                gunConfig.Recoil = Vector3.zero;
+                            end;
+                            if Toggles.rapidFire and Toggles.rapidFire.Value then
+                                gunConfig.FireRate = Options.fireRateValue and Options.fireRateValue.Value or 0.001;
+                            end;
+                            debug.setupvalue(info.func, 3, gunConfig);
+                        end;
+                    end;
+                end;
+                
+                if Toggles.silentAimEnabled and Toggles.silentAimEnabled.Value then
+                    if math.random(0, 100) <= (Options.silentAimHitChance and Options.silentAimHitChance.Value or 100) then
+                        thisModule.getClosestPlayer(Client, Shared);
+                        if Client.silentTarget.part then
+                            data.Direction = (Client.silentTarget.part.Position - data.Origin).Unit;
+                        end;
+                    end;
+                end;
+                
+                return hooks.Flick_BulletFire(data);
+            end));
+        end,
+        
+        buildUI = function(Tabs, Client, Shared)
+            local gunModsGroup = Tabs.Main:AddLeftGroupbox("Gun Mods");
+            gunModsGroup:AddToggle("noRecoil", {Text = "No Recoil"});
+            gunModsGroup:AddToggle("noSpread", {Text = "No Spread"});
+            gunModsGroup:AddToggle("rapidFire", {Text = "Rapid Fire"});
+            local rapidFireSettings = gunModsGroup:AddDependencyBox();
+            rapidFireSettings:AddSlider("fireRateValue", {Text = "Fire Rate", Min = 0.001, Max = 0.5, Default = 0.001, Rounding = 3});
+            rapidFireSettings:SetupDependencies({{Toggles.rapidFire, true}});
+        end,
+        
+        Unload = function()
+        end,
+    };
 end;
 
 --[[
